@@ -1,4 +1,3 @@
-# Stock-Market-Prediction-Using-Time-Series
 # Goldman Sachs Stock Price Prediction
 
 End-to-end time-series pipeline for Goldman Sachs (`GS`) using a naive baseline, ARIMA, Prophet, XGBoost and an LSTM — tracked with MLflow, served through FastAPI, containerised with Docker Compose, deployable on AWS EC2.
@@ -7,6 +6,8 @@ End-to-end time-series pipeline for Goldman Sachs (`GS`) using a naive baseline,
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.110+-green?logo=fastapi)
 ![MLflow](https://img.shields.io/badge/MLflow-3.0+-orange?logo=mlflow)
 ![Docker](https://img.shields.io/badge/Docker-Compose-blue?logo=docker)
+![AWS](https://img.shields.io/badge/AWS-EC2-orange?logo=amazonaws)
+![PyTorch](https://img.shields.io/badge/PyTorch-CPU-red?logo=pytorch)
 ![Tests](https://img.shields.io/badge/tests-23%20passing-brightgreen)
 
 ---
@@ -15,6 +16,8 @@ End-to-end time-series pipeline for Goldman Sachs (`GS`) using a naive baseline,
 
 - [What this project claims](#what-this-project-claims)
 - [Data integrity finding](#data-integrity-finding)
+- [Features](#features)
+- [Tech stack](#tech-stack)
 - [Architecture](#architecture)
 - [Project structure](#project-structure)
 - [Evaluation protocol](#evaluation-protocol)
@@ -28,6 +31,7 @@ End-to-end time-series pipeline for Goldman Sachs (`GS`) using a naive baseline,
 - [MLflow tracking](#mlflow-tracking)
 - [Testing](#testing)
 - [Extensions](#extensions)
+- [Live endpoints](#live-endpoints)
 
 ---
 
@@ -67,6 +71,41 @@ Two independent confirmations:
 `src/data/loader.py` applies the repair, then **re-validates and raises** if any row still fails. If you swap in a clean Yahoo Finance export, set `AUTO_REPAIR_COLUMNS = False` in `config.py`; the loader can also brute-force the correct permutation from the invariants alone.
 
 Dataset after repair: **6,709 trading days, 1999-05-04 → 2026-01-02**, zero nulls, zero duplicate dates. The 250-day shortfall against the business-day calendar is exactly market holidays over 26 years.
+
+---
+
+## Features
+
+- **Six model families in one pipeline** — naive/drift baseline, ARIMA, Prophet, XGBoost, LSTM, and GARCH volatility models
+- **Baseline-relative scoring** — every model reports SKILL against a random walk, so a good-looking MAPE cannot be mistaken for a good model
+- **Automatic leakage detection** — `check_for_leakage()` flags any result too good to be real, backed by tests asserting target alignment
+- **Data validation that fails loudly** — OHLC invariants are checked on load and raise rather than warn; this is what caught the shipped CSV's shifted headers
+- **Walk-forward one-step evaluation** — parameters fitted on training data only, never refitted on the future
+- **Volatility forecasting** — GARCH, GJR-GARCH and Student-t variants scored on QLIKE with VaR calibration
+- **REST API** — FastAPI with Swagger UI at `/docs`; every forecast response carries its own backtest metrics
+- **Experiment tracking** — MLflow logs parameters, metrics and artifacts per run
+- **Containerised** — Docker Compose runs the API and MLflow together
+- **Tested** — 23 tests covering data integrity, leakage, model behaviour and API contracts
+
+---
+
+## Tech stack
+
+| Layer | Technology |
+|---|---|
+| **Language** | Python 3.11+ |
+| **API** | FastAPI + Uvicorn + Gunicorn |
+| **Price models** | statsmodels (ARIMA), Prophet, XGBoost, PyTorch (LSTM) |
+| **Volatility models** | arch (GARCH, GJR-GARCH) |
+| **Evaluation** | Custom metrics: SKILL, QLIKE, Mincer-Zarnowitz, VaR breach rate |
+| **Experiment tracking** | MLflow 3.x, SQLite backend |
+| **Feature engineering** | pandas, numpy (indicators implemented in-repo, no ta-lib dependency) |
+| **Data source** | Static CSV, 1999-2026 (header repair applied on load) |
+| **Testing** | pytest |
+| **Containerisation** | Docker + Docker Compose |
+| **Cloud** | AWS EC2 t3.small, Ubuntu 24.04, EBS 20 GB |
+
+Indicators (RSI, MACD, Bollinger, ATR) are implemented directly in `src/features/engineer.py` rather than via ta-lib, which needs a C library compiled per platform and is a common cause of failed installs on Windows.
 
 ---
 
@@ -370,40 +409,115 @@ The MLflow container binds `--host 0.0.0.0` and publishes port 5000 directly. No
 
 ---
 
+### What the compose file runs
+
+| Service | Image / build | Port | Purpose |
+|---|---|---|---|
+| `gs-api` | built from `deployment/Dockerfile` | 8000 | FastAPI + Gunicorn, one worker |
+| `gs-mlflow` | `ghcr.io/mlflow/mlflow` | 5000 | Tracking UI, SQLite backend |
+
+Both mount `../mlruns`, `../models_saved` and `../data` from the host, so training done inside a container persists after `docker compose down`.
+
+---
+
 ## AWS EC2 deployment
 
 **Use t3.small, not t3.micro.** 1 GB of RAM is not enough to `pip install` PyTorch and Prophet; the build gets OOM-killed. Set the EBS volume to **20 GB** — the 8 GB default fills during the Docker build.
 
-```bash
-# 1. Launch Ubuntu 24.04 LTS, t3.small, 20 GB EBS
-#    Security group: 22 from My IP, 8000 from 0.0.0.0/0, 5000 from My IP
+### Step 1 — Launch the instance
 
-# 2. Connect
+| Setting | Value |
+|---|---|
+| AMI | Ubuntu Server 24.04 LTS |
+| Instance type | t3.small (2 GB RAM) |
+| Storage | 20 GB gp3 |
+| Key pair | create and download `.pem` |
+
+Security group inbound rules:
+
+| Port | Source | Purpose |
+|---|---|---|
+| 22 | My IP | SSH |
+| 8000 | 0.0.0.0/0 | FastAPI |
+| 5000 | My IP | MLflow — never `0.0.0.0/0` |
+
+### Step 2 — Connect
+
+```powershell
+# Windows PowerShell
+icacls.exe ubuntu-key.pem /reset
+icacls.exe ubuntu-key.pem /grant:r "$($env:USERNAME):(R)"
+icacls.exe ubuntu-key.pem /inheritance:r
+ssh -i ubuntu-key.pem ubuntu@<EC2-PUBLIC-IP>
+```
+
+```bash
+# macOS / Linux
 chmod 400 ubuntu-key.pem
 ssh -i ubuntu-key.pem ubuntu@<EC2-PUBLIC-IP>
+```
 
-# 3. Docker
+### Step 3 — Install Docker
+
+```bash
 sudo apt-get update
 sudo apt-get install -y docker.io docker-compose-plugin
 sudo usermod -aG docker ubuntu && newgrp docker
+docker --version && docker compose version
+```
 
-# 4. Deploy
-git clone <your-repo-url> ~/gs_stock_prediction
+### Step 4 — Upload the project
+
+```powershell
+# From your local machine, not the EC2 box
+scp -i ubuntu-key.pem -r C:\Users\<you>\Desktop\gs_stock_prediction ubuntu@<EC2-PUBLIC-IP>:~/
+```
+
+Or `git clone` it on the instance if you have pushed it to a repo.
+
+### Step 5 — Build and start
+
+```bash
 cd ~/gs_stock_prediction/deployment
 docker compose up -d --build
+docker compose ps
+```
 
-# 5. Train inside the API container (models persist via the mounted volume)
-docker compose exec gs-api python pipelines/train_pipeline.py --model arima xgboost
+First build takes 10–15 minutes; Prophet compiles its Stan backend.
 
-# 6. Verify
+### Step 6 — Train inside the container
+
+```bash
+docker compose exec gs-api python pipelines/train_pipeline.py --model all
+docker compose exec gs-api python pipelines/volatility_pipeline.py
+```
+
+Results persist on the host through the mounted `../mlruns` and `../data` volumes.
+
+### Step 7 — Verify
+
+```bash
 curl http://localhost:8000/health
 ```
 
-Assign an **Elastic IP** or the public address changes on every reboot. Restrict port 5000 to your own IP — MLflow has no authentication and exposing it publishes your full experiment history.
+From a browser: `http://<EC2-PUBLIC-IP>:8000/docs` and `http://<EC2-PUBLIC-IP>:5000`.
+
+**No Nginx and no TCP proxy are needed.** Those workarounds only become necessary when MLflow binds to `127.0.0.1` inside its container. The compose file here starts it with `--host 0.0.0.0` and publishes port 5000 directly, which removes both moving parts.
+
+### Step 8 — Housekeeping
+
+Assign an **Elastic IP**, or the public address changes on every reboot.
 
 If the disk fills mid-build:
+
 ```bash
 sudo growpart /dev/nvme0n1 1 && sudo resize2fs /dev/nvme0n1p1
+```
+
+After a reboot:
+
+```bash
+cd ~/gs_stock_prediction/deployment && docker compose up -d
 ```
 
 ---
@@ -449,6 +563,20 @@ Ranked by how likely they are to produce a result that survives scrutiny.
 4. **Walk-forward cross-validation.** `TimeSeriesSplit` across several expanding windows, so one favourable test period cannot flatter the result.
 5. **Exogenous features.** VIX, the 10-year/2-year spread, XLF sector returns, S&P 500 returns. Cross-sectional information is more likely to help than more transformations of the same price series.
 6. **Transaction-cost-aware backtesting.** `strategy_metrics()` already charges 10 bps per turnover; sweep the cost and watch any apparent edge disappear.
+
+---
+
+## Live endpoints
+
+Fill these in once deployed:
+
+| Service | URL |
+|---|---|
+| FastAPI Swagger UI | `http://<EC2-PUBLIC-IP>:8000/docs` |
+| FastAPI health | `http://<EC2-PUBLIC-IP>:8000/health` |
+| MLflow UI | `http://<EC2-PUBLIC-IP>:5000` |
+
+Assign an Elastic IP or the address changes on every reboot. Keep port 5000 restricted to your own IP — MLflow has no authentication.
 
 ---
 
