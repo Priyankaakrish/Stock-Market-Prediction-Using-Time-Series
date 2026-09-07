@@ -1,8 +1,10 @@
 # Goldman Sachs (GS) — Time Series Forecasting, Rebuilt
 
-A walk-forward forecasting study on 26 years of GS daily bars (1999-05-04 → 2026-03-11, 6,755 sessions).
+A walk-forward forecasting study on 26 years of GS daily bars (1999-05-04 → 2026-03-11, 6,755 sessions), served through a FastAPI application, tracked with MLflow and containerised with Docker Compose.
 
-This is a rebuild of an earlier pipeline whose reported metrics were not merely weak but structurally invalid. The headline result changes completely, and so does the conclusion. **The rebuilt models still do not beat a random walk on daily returns — and that is the correct answer, not a failure.**
+This is a rebuild of an earlier pipeline whose reported metrics were not merely weak but structurally invalid. The headline result changes completely, and so does the conclusion. **The rebuilt models still do not beat a random walk on daily returns — and that is the correct answer, not a failure.** A second task, volatility forecasting, does work, and the API serves both so the difference is visible.
+
+Two deliberate departures from the original layout. Prophet is gone: it fits trend and calendar seasonality, daily equity returns have neither, and it scored R² = −3.8. The ensemble is gone too: averaging several models that each sit at or below a random walk produces another model at the random walk. Everything else from the original structure — API, MLflow, Docker, EDA, persistence, tests — is present.
 
 ---
 
@@ -133,13 +135,10 @@ Where the remaining headroom actually is:
 gs_forecast/
 ├── config.py                     # all parameters
 ├── requirements.txt
+├── .env.example
 ├── data/
 │   ├── raw/gs_master_dataset.csv          # 6,755 daily bars
-│   └── processed/
-│       ├── walkforward_predictions.csv    # per-day predictions, all models
-│       ├── model_comparison.csv           # return + price + significance
-│       ├── strategy_comparison.csv        # long/flat backtest
-│       └── volatility_*.csv               # positive control
+│   └── processed/                          # backtest outputs
 ├── src/
 │   ├── data.py                   # load, validate OHLC, log returns
 │   ├── features.py               # leak-free features (THE one-day shift)
@@ -147,15 +146,29 @@ gs_forecast/
 │   ├── models_lstm.py            # optional torch LSTM
 │   ├── backtest.py               # walk-forward engine
 │   ├── metrics.py                # return/price/significance/strategy
+│   ├── persistence.py            # serving bundles
+│   ├── predict.py                # inference (shared by CLI and API)
 │   └── plots.py
 ├── pipelines/
-│   ├── run_backtest.py           # main study
-│   └── run_volatility.py         # positive control
-├── tests/test_pipeline.py        # 17 regression tests
-└── reports/
-    ├── results.txt
-    ├── volatility_results.txt
-    └── plots/                    # 9 figures
+│   ├── train_pipeline.py         # backtest → MLflow → refit → save bundles
+│   ├── predict_pipeline.py       # CLI inference
+│   ├── run_backtest.py           # return study only
+│   └── run_volatility.py         # volatility study only
+├── api/
+│   ├── main.py                   # FastAPI app, /health, lifespan warm-up
+│   ├── schemas.py                # pydantic v2 request/response models
+│   └── routers/predict.py        # /predict/* endpoints
+├── notebooks/01_EDA_Analysis.py  # stationarity, ACF, distribution tests
+├── deployment/
+│   ├── Dockerfile                # multi-stage, non-root, healthcheck
+│   └── docker-compose.yml        # api + mlflow
+├── tests/                        # 43 tests
+│   ├── test_pipeline.py          # data, leakage, metrics, backtest
+│   ├── test_api.py               # endpoint contracts
+│   └── test_persistence.py       # bundle round-trip, serving consistency
+├── models_saved/{return,volatility}/       # trained bundles
+├── mlflow.db + mlruns/                     # experiment tracking
+└── reports/                                # results.txt + 9 figures
 ```
 
 ## Running it
@@ -163,30 +176,105 @@ gs_forecast/
 ```bash
 pip install -r requirements.txt
 
-python pipelines/run_backtest.py                              # ~1.5 min
-python pipelines/run_volatility.py --horizon 22 --test-days 4200
-pytest tests/ -v                                              # 17 tests
+# 1. Explore
+python notebooks/01_EDA_Analysis.py
 
-# knobs
-python pipelines/run_backtest.py --test-days 500 --refit-every 5
+# 2. Train: backtest, log to MLflow, refit on full history, save bundles
+python pipelines/train_pipeline.py                  # ~2 min, both tasks
+python pipelines/train_pipeline.py --task volatility
+
+# 3. Predict from the CLI
+python pipelines/predict_pipeline.py
+python pipelines/predict_pipeline.py --all --json
+
+# 4. Serve
+uvicorn api.main:app --reload                       # http://localhost:8000/docs
+
+# 5. Inspect experiments
+mlflow ui --backend-store-uri sqlite:///mlflow.db   # http://localhost:5000
+
+# 6. Test
+pytest tests/ -q                                    # 43 tests
 ```
 
-Runtime is ~90 seconds on a single CPU core for the full 1,000-day backtest across six models. The original took 20–40 minutes largely because `auto_arima` searched a wide grid on a 4,000-row non-stationary series; fitting ARIMA on returns with `d=0` over a small AIC grid removes that cost entirely.
+## API
 
-## Figures
+| Method | Endpoint | Purpose |
+|---|---|---|
+| `GET` | `/health` | status + which bundles loaded |
+| `POST` | `/predict/return` | next-day return and implied close |
+| `POST` | `/predict/volatility` | 22-day forward annualised volatility |
+| `GET` | `/predict/return/all` | every return model side by side |
+| `GET` | `/predict/models` | bundle metadata (training window, models) |
+| `GET` | `/predict/backtest/{task}` | full out-of-sample metrics |
 
-| | |
-|---|---|
-| `01_price_and_split.png` | price history with the out-of-sample boundary |
-| `02_stationarity.png` | ACF of price vs returns, return distribution, rolling vol |
-| `03_price_paths.png` | reconstructed one-step price paths (all models overlap) |
-| `04_return_scatter.png` | predicted vs realised return — the honest view |
-| `05_equity_curves.png` | long/flat strategies vs buy-and-hold |
-| `06_rolling_dir_acc.png` | rolling 126-day directional accuracy vs 50% |
-| `07_feature_importance.png` | XGBoost gain, final refit |
-| `08_old_vs_new.png` | original R² vs rebuild, with the naive bar included |
-| `09_volatility.png` | HAR forecast vs realised volatility |
+```bash
+curl -X POST localhost:8000/predict/volatility \
+     -H 'Content-Type: application/json' -d '{"model":"ridge"}'
+```
 
----
+```json
+{
+  "model": "ridge",
+  "as_of": "2026-03-11",
+  "horizon_days": 22,
+  "predicted_annualised_vol_pct": 32.49,
+  "trailing_realised_annualised_vol_pct": 38.45,
+  "regime": "subdued",
+  "backtest": { "r2": 0.2087, "correlation": 0.5163,
+                "skill_vs_persistence": 0.2672 }
+}
+```
+
+The return endpoint returns the same shape plus a `warning` field:
+
+```json
+{
+  "predicted_close": 821.30,
+  "last_close": 823.76,
+  "backtest": { "directional_accuracy_pct": 50.2,
+                "skill_vs_random_walk": -0.0145,
+                "dm_pvalue_vs_naive": 0.1537 },
+  "warning": "This model does not beat a random walk out of sample ..."
+}
+```
+
+**Every response ships its own out-of-sample track record.** This is the one
+design decision here I would argue hardest for. The original project saved bare
+`.pkl` files, so anything loading `xgboost_model.pkl` had no way to know it
+scored below a random walk. Here the backtest metrics travel with the model and
+`tests/test_api.py` asserts the warning is present. A forecast without its error
+history is worse than no forecast, because it looks authoritative.
+
+Both endpoints accept an optional `history` array of OHLCV bars to forecast from
+fresher data. At least 320 bars are required — the 200-day moving average needs
+them — and shorter input is rejected with a 422 rather than silently producing
+NaN features.
+
+## Deployment
+
+```bash
+python pipelines/train_pipeline.py        # bundles must exist before building
+cd deployment && docker compose up -d     # api :8000, mlflow :5000
+```
+
+The image is multi-stage (wheels built once, then a slim runtime), runs as a
+non-root user, and has a healthcheck on `/health`. Bundles are mounted read-only
+so retraining on the host takes effect on restart without an image rebuild.
+Training deliberately does **not** happen at build time — builds should be fast
+and reproducible, and training reads data that changes on its own schedule.
+
+**Not verified:** the sandbox this was built in has no Docker daemon, so the
+image has never been built and the compose stack has never been started. The
+Dockerfile and compose file are written against the real project layout and
+every `COPY` path is confirmed to exist, but treat the first `docker compose up`
+as untested. Everything else in this README was executed and its output is
+reproduced verbatim.
+
+Two things to know if you deploy this. MLflow 3.x rejects the plain-directory
+`./mlruns` file store the original project used and now raises on it, so the
+backend here is SQLite — for anything multi-user, point `MLFLOW_TRACKING_URI` at
+a Postgres-backed server instead. And the compose file binds ports directly with
+no reverse proxy or TLS; put it behind nginx before exposing it.
 
 *Research code. Not investment advice, and nothing here constitutes a trading recommendation — the most defensible finding in it is that this class of model does not predict daily GS returns.*
