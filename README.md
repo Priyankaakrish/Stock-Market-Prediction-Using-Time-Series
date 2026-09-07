@@ -1,8 +1,7 @@
 # Goldman Sachs Stock Price Prediction — Time Series
 
 ARIMA, Prophet, XGBoost, LSTM and a weighted ensemble, benchmarked against a
-random walk, with a FastAPI service and Docker deployment. Structured after
-[suhas-crypto/Goldman_Sachs_stock_price_prediction](https://github.com/suhas-crypto/Goldman_Sachs_stock_price_prediction),
+random walk, with a FastAPI service and Docker deployment.
 with the evaluation methodology tightened so the numbers mean something.
 
 Data: `goldmansachs.csv`, 6,709 rows, 1999-05-04 to 2026-01-02, after
