@@ -1,355 +1,192 @@
-# Goldman Sachs Stock Price Prediction — Time Series
+# Goldman Sachs (GS) — Time Series Forecasting, Rebuilt
 
-ARIMA, Prophet, XGBoost, LSTM and a weighted ensemble, benchmarked against a
-random walk, with a FastAPI service and Docker deployment. 
-Data: `goldmansachs.csv`, 6,709 rows, 1999-05-04 to 2026-01-02, after
-repairing a column-ordering fault in the source file.
+A walk-forward forecasting study on 26 years of GS daily bars (1999-05-04 → 2026-03-11, 6,755 sessions).
 
----
-
-## Headline result
-
-**No model beats a random walk with drift by a meaningful margin.** The best
-model (XGBoost) improves RMSE by 0.4% over a two-line baseline with zero parameters.
-Reported directional accuracy of 61.83% is the test window's upward drift, not
-forecasting skill.
-
-That is the normal finding for daily equity prices. The sections below are
-arranged so it stays visible rather than getting buried under a good-looking
-RMSE.
+This is a rebuild of an earlier pipeline whose reported metrics were not merely weak but structurally invalid. The headline result changes completely, and so does the conclusion. **The rebuilt models still do not beat a random walk on daily returns — and that is the correct answer, not a failure.**
 
 ---
 
-## Quick start
+## The problem with the original run
 
-```bash
-pip install -r requirements.txt
+The original `model_comparison.csv` reported this:
 
-# 1. repair the source CSV (see Data repair)
-python pipelines/repair_csv.py --in data/raw/goldmansachs.csv \
-                               --out data/raw/goldmansachs_clean.csv
+| Model | MAE | MAPE | R² | Directional Acc. |
+|---|---|---|---|---|
+| ARIMA | $186.80 | 47.99% | **−5.15** | 34.0% |
+| Prophet | $165.67 | 42.67% | **−3.80** | 30.8% |
+| XGBoost | $146.25 | 36.67% | **−3.14** | 56.6% |
+| LSTM | — | — | — | 27.4% |
 
-# 2. exploratory analysis → notebooks/plots/
-python notebooks/01_EDA_Analysis.py --csv data/raw/goldmansachs_clean.csv
+A negative R² means every model was worse than predicting a constant. Directional accuracy below 50% means the sign predictions were worse than a coin flip. Four separate defects produced this:
 
-# 3. fit ensemble weights on validation, then train + evaluate
-python pipelines/fit_ensemble.py   --csv data/raw/goldmansachs_clean.csv
-python pipelines/train_pipeline.py --csv data/raw/goldmansachs_clean.csv
+**1. A 1,013-step forecast was scored as if it were a forecast.**
+The pipeline split 70/15/15, fit on the first 70%, then asked ARIMA and Prophet for a single forecast covering the entire test set — four calendar years, in one shot, with no intervening observations. Beyond roughly 10 trading days an ARIMA forecast on equity data converges to its unconditional mean and stays there. Scoring that against a series that nearly tripled is not a measurement of the model.
 
-# 4. forecast from saved artefacts
-python pipelines/predict_pipeline.py --steps 30
+**2. Tree models were asked to extrapolate a price level.**
+XGBoost was trained to predict `Close` directly. Training-era prices ran roughly $50–400; test-era prices ran $300–830. A decision tree predicts by averaging training targets inside a leaf, so it can never output a value above the maximum it was fitted on. Every prediction in the upper half of the test set was clipped at the training ceiling by construction. That single choice explains the $146 MAE.
 
-# 5. serve
-uvicorn api.main:app --reload --port 8000   # docs at /docs
+**3. The LSTM target was scaled off-range.**
+`MinMaxScaler` was fit on training prices and applied to test prices. Every test price above the training maximum mapped above 1.0 — outside the range the network ever saw — and the inverse transform then compounded the error. Combined with a sequence-alignment bug that back-filled predictions into the tail of a NaN array, the LSTM row emerged with no metrics at all.
 
-pytest tests/ -q                             # 49 tests
-```
-
-Models can be trained one at a time; predictions are cached per model in
-`data/processed/cache/`, so a run picks up where the last one stopped.
-
-```bash
-python pipelines/train_pipeline.py --models arima
-python pipelines/train_pipeline.py --report-only
-```
-
-Docker:
-
-```bash
-cd deployment
-docker compose run --rm trainer     # repair → weights → train
-docker compose up -d api            # http://localhost:8000/docs
-```
+**4. No baseline, so nothing could be interpreted.**
+There was no random-walk benchmark anywhere in the pipeline. Without it there is no way to distinguish "this model has an edge" from "this model is elaborate noise". This is the defect that matters most, because it is the one that makes the other three invisible.
 
 ---
 
-## Data repair
+## What this rebuild changes
 
-The supplied CSV's header did not match its contents. The header reads
-`date,open,high,low,close,adj_close,volume`, but on the first row `low`
-(77.25) exceeds `high` (70.375), which is impossible.
+| | Original | Rebuild |
+|---|---|---|
+| Target | `Close` (price level) | next-day **log return** |
+| Evaluation | one 1,013-step forecast | **walk-forward, 1-step-ahead**, 1,000 times |
+| Refitting | never | every 21 trading days, expanding window |
+| Baseline | none | **random walk + drift**, and everything is scored against them |
+| Leakage control | implicit | explicit one-day shift + enforced by tests |
+| Significance | none | Diebold–Mariano, binomial test on direction |
+| Feature scale | raw prices, MAs | ratios, returns, z-scores (scale-free) |
+| Verdict metric | price R² | **skill vs random walk**, IC, directional accuracy |
 
-Testing all 120 column permutations against the OHLC invariants
-(`high >= max(open, close)`, `low <= min(open, close)`) left two candidates at
-100% validity, differing only in whether open and close were swapped. Mean
-overnight gap settles it — 0.72% for one ordering against 1.98% for the other,
-since real markets open near the previous close.
-
-**The five price columns are stored in exact reverse of their header labels.**
-True order: `date, adj_close, close, high, low, open, volume`.
-
-Two independent checks confirm it. The `adj_close / close` ratio runs 0.6920
-to 1.0000 and converges on 1.0 at the most recent date, which is what an
-adjusted-close series must do. And the 1999-05-04 adjusted close under this
-reading is 48.697, against 48.44 in the reference yfinance dataset for the
-same day.
-
-`pipelines/repair_csv.py` detects this rather than hardcoding it, and puts
-OHLC on a consistent adjusted basis (raw OHLC scaled by `adj_close / close`).
-After repair: 0 invalid OHLC rows out of 6,709, no duplicate dates, no nulls.
-
-Had this gone unnoticed, every model would have trained on a series where
-"high" was actually the daily low.
-
----
-
-## Evaluation design
-
-Chronological 70/15/15 split — train 1999-2018 (4,871 days), validation
-2018-2022 (1,044), test 2022-01-04 to 2026-01-02 (1,044). No shuffling.
-
-Two tracks, both keyed by **target date** (the day being predicted):
-
-- **Track A — 1 day ahead.** Walk-forward: predict tomorrow, then see the true
-  value before moving on.
-- **Track B — 30 business days ahead.** A true 30-day-ahead point forecast from
-  every test date. This is the horizon the API serves.
-
-Three reference points are reported as first-class models:
-
-| Baseline | Definition |
-|---|---|
-| **Naive** | Tomorrow's price equals today's price |
-| **Drift** | Today's price grown at the mean historical rate (fitted on train only) |
-| **Theil's U** | Model RMSE ÷ naive RMSE. Below 1.0 beats the random walk |
-
-Prophet appears only in Track B: it has no autoregressive term, so grading it
-one-day-ahead would be meaningless rather than merely unflattering.
-
-Ensemble weights are fitted on the **validation** period by
-`pipelines/fit_ensemble.py`, using a second independent fit of every model on
-the training split alone, then frozen before the test period is touched.
+The central mechanical change is one line in `src/features.py`: the entire indicator block is computed on full history, then shifted forward by one row. Features on row `t` therefore contain only what was observable at the close of day `t−1`. `tests/test_pipeline.py` enforces this by recomputing features from a truncated history and asserting the values match.
 
 ---
 
 ## Results
 
-Run environment: Windows 11, Python 3.14.0, pandas 3.0.5, numpy 2.5.2,
-statsmodels 0.15.0, xgboost 3.4.1, prophet 1.4.0.
+Walk-forward, 1,000 trading days out-of-sample (2022-03-16 → 2026-03-11). Every model forecasts exactly one day ahead, refit monthly.
 
-Split: train 1999-05-04 to 2018-01-02 (4,871 days), validation 2018-2022
-(1,044), test 2022-01-04 to 2026-01-02 (1,044). Chronological, never shuffled.
+### Return space — what the models actually predict
 
-### Track B - 30 business days ahead (n = 1,014)
-
-| Model | RMSE | MAE | MAPE % | R2 | DirAcc % | IC | Theil U |
+| Model | MAE (bps) | RMSE (bps) | Dir. Acc. | IC | **Skill vs naive** | DM p | Dir p |
 |---|---|---|---|---|---|---|---|
-| XGBoost | 44.87 | 33.85 | 7.51 | 0.928 | 61.83 | **0.248** | 0.964 |
-| **Drift** | 45.06 | 33.93 | 7.53 | 0.928 | 61.83 | 0.007 | 0.968 |
-| **Naive** | 46.55 | 34.94 | 7.64 | 0.923 | - | - | 1.000 |
-| ARIMA(2,1,3) | 47.09 | 35.34 | 7.72 | 0.921 | 52.66 | 0.044 | 1.012 |
-| Prophet | 75.46 | 57.40 | 14.76 | 0.797 | 49.11 | 0.158 | 1.621 |
+| drift | 126.12 | 176.03 | 53.9% | −0.000 | **+0.0017** | 0.158 | 0.007 |
+| **naive (random walk)** | 126.37 | 176.18 | — | — | **0.0000** | — | — |
+| xgboost | 127.13 | 177.32 | 49.8% | −0.104 | −0.0131 | 0.209 | 0.563 |
+| arima | 127.37 | 177.34 | 51.9% | −0.026 | −0.0132 | 0.147 | 0.121 |
+| ridge | 127.61 | 177.45 | 50.2% | +0.024 | −0.0145 | 0.154 | 0.462 |
+| mlp | 128.11 | 178.03 | 50.2% | −0.055 | −0.0211 | **0.0003** | 0.462 |
 
-### Track A - 1 day ahead (n = 1,044)
+**Not one model beats the random walk.** Skill scores are negative for every learned model, information coefficients are indistinguishable from zero, and directional accuracy sits at the coin-flip line. The MLP is significantly *worse* than naive (DM p = 0.0003).
 
-| Model | RMSE | MAE | MAPE % | R2 | DirAcc % | IC | Theil U |
-|---|---|---|---|---|---|---|---|
-| XGBoost | 7.990 | 5.278 | 1.206 | 0.998 | 52.99 | 0.013 | 0.999 |
-| **Drift** | 7.994 | 5.283 | 1.207 | 0.998 | 53.04 | -0.033 | 0.999 |
-| **Naive** | 8.004 | 5.287 | 1.207 | 0.998 | - | - | 1.000 |
-| ARIMA(2,1,3) | 8.062 | 5.390 | 1.234 | 0.998 | 47.46 | -0.015 | 1.007 |
+The `drift` row deserves a caveat, because it is the kind of result that gets mistaken for a finding. Drift always predicts a small positive return, so it is always "long". Its 53.9% directional accuracy (p = 0.007) is simply the base rate of up-days in a rising market, not forecasting skill. Its skill score of +0.0017 is economically meaningless.
 
-All four models sit within 1% of each other. ARIMA is worse than doing nothing
-(Theil U above 1.0).
+### Price space — why the original metric was the wrong yardstick
 
-The LSTM and ensemble rows are absent for environment reasons - see
-*Limitations* below.
+| Model | MAE ($) | MAPE | R² |
+|---|---|---|---|
+| naive | 5.94 | 1.26% | **0.9977** |
+| xgboost | 5.97 | 1.27% | 0.9977 |
+| arima | 5.97 | 1.27% | 0.9977 |
+| ridge | 6.01 | 1.28% | 0.9977 |
 
----
+R² went from −5.15 to 0.9977 and MAE from $186.80 to $5.94. That looks like a spectacular fix, and in one sense it is — but the naive baseline scores *identically*. On a one-step horizon, yesterday's close already explains 99.77% of today's variance. A price-space R² near 1.0 is a property of the horizon, not evidence of a model. This is exactly why the baseline had to exist before any number could be read.
 
-## Reading the directional accuracy
+### Economically
 
-XGBoost and the drift baseline both score **61.8343%** - identical to four
-decimal places. That is not a coincidence and it is the central finding.
+Long when the forecast is positive, flat otherwise, 1 bp per position change:
 
-Drift is `last_close x exp(mu x horizon)` with `mu` estimated on training data:
-one parameter, no features, no training loop. It predicts +0.92% over every
-30-day window in the test period. GS rose in 61.83% of those windows, so any
-permanently bullish forecaster scores exactly 61.83%. XGBoost's near-constant
-prediction reproduces the same figure.
+| Strategy | Ann. Return | Ann. Vol | Sharpe | Max DD | Trades |
+|---|---|---|---|---|---|
+| **Buy & hold** | **29.2%** | 27.9% | **0.92** | −30.9% | 1 |
+| ridge | 20.2% | 21.3% | 0.86 | −23.6% | 312 |
+| arima | 18.0% | 23.6% | 0.70 | −37.8% | 433 |
+| xgboost | 12.9% | 24.4% | 0.50 | −26.7% | 193 |
+| mlp | 10.9% | 19.2% | 0.54 | −23.0% | 144 |
 
-Supporting diagnostics from `notebooks/01_EDA_Analysis.py`:
-
-- ADF on price level: p = 1.000 (non-stationary)
-- ADF on log returns: p = 3.6e-26 (stationary)
-- Lag-1 return autocorrelation: **-0.0467** - almost no short-horizon structure
-- Test-window 30-day rise rate: **61.83%**
-
-The figure that survives is XGBoost's **IC of 0.248** - Spearman rank
-correlation between predicted and realised returns - against drift's 0.007. A
-constant cannot rank anything, so this is genuine, if modest, time-varying
-signal. It is the only metric in either table where a trained model clearly
-separates from a zero-effort baseline.
-
-XGBoost's early stopping fired at `best_iteration=0`: validation loss rose on
-the very first boosting round. That is consistent with the above rather than a
-contradiction of it - there is little learnable signal, so the fitted model is
-close to a constant.
-
-`notebooks/plots/08_data_split.png` shows this directly: the distribution of
-30-day forward returns in the test window, with the rise rate that every
-bullish-constant model reproduces.
+Buy-and-hold wins on both return and Sharpe. Ridge gets closest, with lower drawdown — but that is what being out of the market 45% of the time buys you, and it does not survive as an edge.
 
 ---
 
-## Four bugs found and fixed
+## Is the pipeline capable of finding signal at all?
 
-Each produced results that looked excellent rather than obviously broken, and
-each is now covered by a test.
+A study that finds nothing is only credible if the same machinery finds something when something is there. `pipelines/run_volatility.py` runs the identical walk-forward code on a target that *is* known to be predictable — 22-day forward realised volatility — scored against a matched-horizon persistence benchmark.
 
-**1. Off-by-one in prediction alignment.** The first run scored XGBoost at
-R² = 1.0000, RMSE 0.60, 98.5% directional accuracy. Predictions were indexed by
-the *feature* date rather than the *target* date, so a horizon-1 forecast was
-graded against a day the model had already seen.
-→ `build_feature_frame` returns explicit `target_dates`;
-`test_target_dates_are_horizon_ahead` pins it.
+| Model | MAE (log) | R² | Corr | Skill vs persistence |
+|---|---|---|---|---|
+| ridge | 0.236 | **0.209** | 0.516 | **+0.267** |
+| xgboost | 0.243 | 0.172 | 0.478 | +0.233 |
+| HAR-RV | 0.252 | 0.120 | 0.470 | +0.185 |
+| persistence | 0.278 | −0.080 | 0.462 | 0.000 |
 
-**2. Daylight-saving split index.** Source timestamps carried a market-local UTC
-offset that flips seasonally (−04:00 summer, −05:00 winter). Summer rows landed
-on 04:00 and winter rows on 05:00, so the business-day reindex matched only
-half of them and forward-filled the rest — silently dropping 328 of 1,052 test
-rows and creating fake flat runs.
-→ dates normalised to midnight; `test_loader_normalises_dst_offsets`.
+Every model beats the benchmark, and the best explains ~21% of the variance in log volatility. The code finds signal where signal exists. Daily returns simply do not contain any.
 
-**3. Non-stationary features in tree models.** Trees split on thresholds and
-cannot extrapolate: a model trained on prices up to $250 cannot output $914.
-With raw levels included, top features were `High` and `SMA_5` and Track B RMSE
-was worse than naive.
-→ scale-free features only, log-return targets;
-`test_xgboost_predicts_log_returns_not_levels`.
-
-**4. Prophet's changepoint range.** Prophet's default `changepoint_range=0.8`
-places no changepoints in the most recent 20% of history, so it extrapolated
-the trend from 2021 and missed the entire run-up — forecasting 682 against a
-last close of 914. Setting `changepoint_range=0.95` moved its serving forecast
-to 878 and its test RMSE from 90.55 to 75.55.
-
-Two further serving-path bugs were caught by the API smoke test: the drift
-baseline was not compounding with the horizon, and requesting `ensemble` alone
-silently collapsed the blend to whichever members happened to be loaded.
+One caveat found along the way: over the same 2022–2026 window used for the return backtest, volatility persistence collapses — `corr(backward-22d, forward-22d)` falls from 0.70 full-sample to 0.16. Run the control on the longer window (`--test-days 4200`, the default used above) or the control itself looks like a failure for reasons that have nothing to do with the code.
 
 ---
 
-## Structure
+## What this means
+
+Daily equity returns on a liquid large-cap name are close to a martingale. That is not a defect in the modelling; it is roughly what an efficient market is supposed to look like, and the result here is consistent with the broad finding in the literature that daily return direction is not reliably predictable from price history alone.
+
+The interesting engineering question is therefore not "which model wins" but "would I have known if none of them did". The original pipeline could not have told you. This one can, and does.
+
+Where the remaining headroom actually is:
+- **Volatility and risk** — demonstrably forecastable, and the basis of real products (option pricing, position sizing, VaR).
+- **Longer horizons** — monthly and quarterly returns show more documented predictability than daily.
+- **Data beyond price** — order flow, earnings revisions, positioning, cross-asset signals. Twenty-five years of OHLCV is a thin diet.
+- **Cross-sectional prediction** — ranking many names against each other is a far better-posed problem than forecasting one name's level.
+
+---
+
+## Project structure
 
 ```
-gs_stock_prediction/
-├── config.py                       # all tunable parameters
-├── .env.example
+gs_forecast/
+├── config.py                     # all parameters
 ├── requirements.txt
+├── data/
+│   ├── raw/gs_master_dataset.csv          # 6,755 daily bars
+│   └── processed/
+│       ├── walkforward_predictions.csv    # per-day predictions, all models
+│       ├── model_comparison.csv           # return + price + significance
+│       ├── strategy_comparison.csv        # long/flat backtest
+│       └── volatility_*.csv               # positive control
 ├── src/
-│   ├── data/
-│   │   ├── loader.py               # schema-flexible CSV reader
-│   │   └── preprocessor.py         # cleaning + leak-safe scaler
-│   ├── features/engineer.py        # RSI, MACD, Bollinger, ATR, lags, rolling
-│   ├── models/
-│   │   ├── baseline.py             # Naive + Drift
-│   │   ├── arima_model.py          # AIC grid search, walk-forward append
-│   │   ├── prophet_model.py        # rolling-origin refit
-│   │   ├── xgboost_model.py        # log-return target
-│   │   ├── lstm_model.py           # 2-layer PyTorch, batched rollout
-│   │   └── ensemble.py             # SLSQP weights on the simplex
-│   └── evaluation/metrics.py       # RMSE/MAE/MAPE + DirAcc, IC, Theil's U
+│   ├── data.py                   # load, validate OHLC, log returns
+│   ├── features.py               # leak-free features (THE one-day shift)
+│   ├── models.py                 # naive, drift, ridge, xgboost, mlp, arima
+│   ├── models_lstm.py            # optional torch LSTM
+│   ├── backtest.py               # walk-forward engine
+│   ├── metrics.py                # return/price/significance/strategy
+│   └── plots.py
 ├── pipelines/
-│   ├── repair_csv.py               # detects the reversed-column fault
-│   ├── fit_ensemble.py             # validation-fitted weights
-│   ├── train_pipeline.py           # end-to-end, resumable
-│   └── predict_pipeline.py         # inference from saved artefacts
-├── api/
-│   ├── main.py                     # FastAPI app + lifespan registry
-│   ├── schemas.py                  # Pydantic v2
-│   └── routers/predict.py          # /forecast /models /metrics /health
-├── notebooks/01_EDA_Analysis.py    # 8 diagnostic plots
-├── tests/                          # 49 tests
-├── deployment/                     # Dockerfile + docker-compose.yml
-├── models_saved/                   # trained artefacts
-├── data/processed/                 # metrics, forecasts, prediction cache
-└── reports/                        # charts + run_manifest.json
+│   ├── run_backtest.py           # main study
+│   └── run_volatility.py         # positive control
+├── tests/test_pipeline.py        # 17 regression tests
+└── reports/
+    ├── results.txt
+    ├── volatility_results.txt
+    └── plots/                    # 9 figures
 ```
 
-The loader normalises header names, so exports from Yahoo Finance,
-Investing.com, MarketWatch, Nasdaq or yfinance load without editing. It also
-handles `1,234.56`, `$412.30`, `12.3M` and `(4.2)` number formats.
-
----
-
-## API
-
-`uvicorn api.main:app --port 8000`, docs at `/docs`.
-
-| Endpoint | Purpose |
-|---|---|
-| `GET /api/v1/health` | Status, loaded models, data recency |
-| `GET /api/v1/models` | Per-model availability and test metrics |
-| `POST /api/v1/forecast` | N-day forecast, 1–252 days |
-| `GET /api/v1/metrics` | Full metrics table from the last training run |
+## Running it
 
 ```bash
-curl -X POST localhost:8000/api/v1/forecast \
-     -H 'Content-Type: application/json' \
-     -d '{"steps": 30, "models": ["ensemble"]}'
+pip install -r requirements.txt
+
+python pipelines/run_backtest.py                              # ~1.5 min
+python pipelines/run_volatility.py --horizon 22 --test-days 4200
+pytest tests/ -v                                              # 17 tests
+
+# knobs
+python pipelines/run_backtest.py --test-days 500 --refit-every 5
 ```
 
-Every `/forecast` response carries the naive and drift baselines alongside the
-requested model, plus `model_vs_drift_pct`. That is deliberate: the measured
-gap is small enough that a bare number would misrepresent it.
+Runtime is ~90 seconds on a single CPU core for the full 1,000-day backtest across six models. The original took 20–40 minutes largely because `auto_arima` searched a wide grid on a 4,000-row non-stationary series; fitting ARIMA on returns with `d=0` over a small AIC grid removes that cost entirely.
 
-Missing artefacts degrade the service rather than crashing it — `/health`
-reports what is live and `/forecast` still serves baselines.
+## Figures
 
----
-
-## Model notes
-
-**ARIMA(2,1,3)**, selected by AIC (4342.8) over p,q ≤ 3, fitted on the trailing
-750 observations. Walk-forward uses `append(refit=False)`. 278s in this run.
-
-**Prophet** fits in log space with multiplicative seasonality and
-`changepoint_range=0.95`, refit every 30 business days on a rolling origin.
-Still the worst performer (Theil U 1.62, 400s in this run) — yearly and weekly seasonality is
-close to absent in equity prices, and its ±14.6% forecast spread against a
-realised 9.6% shows the trend model overreacting.
-
-**XGBoost** on 60 stationary features. Top features in this run:
-`RSI`, `roll_z_50`, `Price_SMA_200_ratio`, `Volume_ratio`, `DayOfWeek`. Early
-stopping fired at `best_iteration=0` — validation loss rose on the first
-boosting round, which is itself informative.
-
-**LSTM** — 2 layers, hidden 64, 60-day windows over standardised log returns,
-Huber loss, early stopping. Multi-step evaluation rolls all origins forward in
-one batch, turning ~30,000 sequential forward passes into 30 batched ones. Not
-evaluated in this run — see *Limitations*.
-
-**Ensemble** — SLSQP on the simplex (w ≥ 0, Σw = 1), fitted on validation.
-Weights came out LSTM 0.826, Drift 0.092, Prophet 0.068, XGBoost 0.013, with
-ARIMA and Naive at zero. Not evaluated in this run — see *Limitations*.
+| | |
+|---|---|
+| `01_price_and_split.png` | price history with the out-of-sample boundary |
+| `02_stationarity.png` | ACF of price vs returns, return distribution, rolling vol |
+| `03_price_paths.png` | reconstructed one-step price paths (all models overlap) |
+| `04_return_scatter.png` | predicted vs realised return — the honest view |
+| `05_equity_curves.png` | long/flat strategies vs buy-and-hold |
+| `06_rolling_dir_acc.png` | rolling 126-day directional accuracy vs 50% |
+| `07_feature_importance.png` | XGBoost gain, final refit |
+| `08_old_vs_new.png` | original R² vs rebuild, with the naive bar included |
+| `09_volatility.png` | HAR forecast vs realised volatility |
 
 ---
 
-## Limitations
-
-**LSTM and ensemble not reproduced.** PyTorch's Windows wheel installs without
-`fbgemm.dll` and `asmjit.dll`, which `torch_cpu.dll` requires, so `import torch`
-fails with WinError 126. Confirmed as an environment issue rather than a code
-one: clean `--force-reinstall --no-cache-dir` under both Python 3.14 and 3.12,
-with an intact VC++ runtime (`vcruntime140.dll`, `vcruntime140_1.dll`,
-`msvcp140.dll` all present) and no admin rights to set an antivirus exclusion.
-`torch_cpu.dll` extracts at 305 MB; the two dependencies never appear.
-
-The code paths are unchanged and run elsewhere. `EnsembleForecaster.predict()`
-refuses to blend when members holding more than 50% of the fitted weight are
-absent, so the ensemble is omitted rather than reported as a different model
-under the same name.
-
-## Caveats
-
-This is a modelling exercise, not investment advice, and nothing here supports
-a trading decision. The measured edge over a zero-effort drift baseline is
-0.4% RMSE and would not survive transaction costs. Results cover one specific
-and strongly bullish test window (2022-2026); a test period spanning a drawdown
-would flip the directional accuracy numbers entirely, which is exactly why they
-should not be read as skill.
-
-The honest summary of this project is that it is a well-instrumented
-demonstration that daily equity prices are close to a random walk — which is
-worth more than a leaderboard claiming 98% accuracy.
+*Research code. Not investment advice, and nothing here constitutes a trading recommendation — the most defensible finding in it is that this class of model does not predict daily GS returns.*
