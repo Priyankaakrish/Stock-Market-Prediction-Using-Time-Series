@@ -253,25 +253,42 @@ NaN features.
 
 ## Deployment
 
+Local:
+
 ```bash
 python pipelines/train_pipeline.py        # bundles must exist before building
 cd deployment && docker compose up -d     # api :8000, mlflow :5000
 ```
 
-The image is multi-stage (wheels built once, then a slim runtime), runs as a
-non-root user, and has a healthcheck on `/health`. Bundles are mounted read-only
-so retraining on the host takes effect on restart without an image rebuild.
-Training deliberately does **not** happen at build time — builds should be fast
-and reproducible, and training reads data that changes on its own schedule.
+AWS EC2, behind nginx — see **[deployment/DEPLOYMENT.md](deployment/DEPLOYMENT.md)** for the full runbook:
 
-**Not verified:** the sandbox this was built in has no Docker daemon, so the
-image has never been built and the compose stack has never been started. The
-Dockerfile and compose file are written against the real project layout and
-every `COPY` path is confirmed to exist, but treat the first `docker compose up`
-as untested. Everything else in this README was executed and its output is
-reproduced verbatim.
+```bash
+bash deployment/ec2_setup.sh              # docker, swap, log rotation
+bash deployment/deploy.sh                 # build, health-wait, smoke test
+```
 
-Two things to know if you deploy this. MLflow 3.x rejects the plain-directory
+| File | Purpose |
+|---|---|
+| `Dockerfile` | multi-stage, non-root, healthcheck |
+| `docker-compose.yml` | local dev — api + mlflow |
+| `docker-compose.prod.yml` | EC2 — nginx + gunicorn + mlflow, memory-limited |
+| `nginx.conf` | reverse proxy, rate limiting, basic auth on MLflow |
+| `nginx.main.conf` | http-level config (rate-limit zone) |
+| `ec2_setup.sh` | instance bootstrap — idempotent |
+| `deploy.sh` | deploy with preconditions and smoke tests |
+
+Only nginx publishes ports; the API and MLflow are reachable only on the internal
+Docker network, so nothing bypasses the proxy, the rate limit or the MLflow
+password.
+
+**Not verified:** no Docker daemon existed in the environment this was built in,
+so the image has never been built and no EC2 instance was launched. The nginx
+config is validated (`nginx -t` against 1.24) and was exercised against the live
+API — proxying, POST bodies, 401 on unauthenticated MLflow, and the rate limiter
+rejecting 27 of 50 rapid requests while `/health` stayed exempt. Everything else
+in this README was executed and its output reproduced verbatim.
+
+Two more things. MLflow 3.x rejects the plain-directory
 `./mlruns` file store the original project used and now raises on it, so the
 backend here is SQLite — for anything multi-user, point `MLFLOW_TRACKING_URI` at
 a Postgres-backed server instead. And the compose file binds ports directly with
