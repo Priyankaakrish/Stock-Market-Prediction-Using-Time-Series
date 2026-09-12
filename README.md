@@ -934,8 +934,6 @@ What is *not* worth trying: more technical indicators, deeper networks, or more 
 
 ## Live Resources
 
-## Live Resources
-
 | Service | Location |
 |---|---|
 | S3 data lake — raw | `s3://<bucket>/raw/nvda/ingest_date=YYYY-MM-DD/` |
