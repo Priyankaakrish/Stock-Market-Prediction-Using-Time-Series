@@ -1,0 +1,15 @@
+line-length = 100
+target-version = "py312"
+
+[lint]
+select = ["E", "F", "W", "I", "UP", "B", "C4", "RUF"]
+ignore = [
+    "E501",    # long lines are handled by the formatter
+    "B008",    # FastAPI dependency injection uses calls in defaults
+    "RUF012",  # mutable class attrs are fine on pydantic/config objects
+    "RUF009",  # Paths dataclass intentionally resolves defaults at import time
+]
+
+[lint.per-file-ignores]
+"tests/*"  = ["RUF059"]   # unpacking fixtures and ignoring parts is idiomatic
+"src/plots.py" = ["E402"] # matplotlib backend must be set before pyplot import

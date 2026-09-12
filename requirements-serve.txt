@@ -1,0 +1,18 @@
+# Inference-only dependencies. Deliberately excludes prophet and torch unless
+# the champion model needs them: the serving image should not carry a 2 GB CUDA
+# stack to run a model that is a few hundred kilobytes of coefficients.
+#
+# If an LSTM is ever promoted to champion, uncomment the CPU-only torch line.
+numpy>=1.26
+pandas>=2.2
+scipy>=1.11
+scikit-learn>=1.4
+statsmodels>=0.14
+xgboost>=2.0
+fastapi>=0.110
+uvicorn[standard]>=0.29
+gunicorn>=21.2
+pydantic>=2.6
+mlflow-skinny>=3.0,<4
+# --extra-index-url https://download.pytorch.org/whl/cpu
+# torch>=2.2

@@ -1,0 +1,29 @@
+# MLflow tracking server + model registry.
+FROM python:3.12-slim
+
+ENV PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1
+RUN apt-get update && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/* \
+    && useradd --create-home --uid 10002 mlflowuser
+
+RUN pip install "mlflow>=3.0,<4" boto3 psycopg2-binary
+
+# SQLite metadata store lives on the mounted EBS volume; artifacts go to S3 in
+# production (ARTIFACT_ROOT=s3://<bucket>/mlflow-artifacts).
+ENV BACKEND_URI=sqlite:////mlflow/mlflow.db \
+    ARTIFACT_ROOT=/mlflow/artifacts \
+    MLFLOW_PORT=5002
+
+RUN mkdir -p /mlflow/artifacts && chown -R mlflowuser:mlflowuser /mlflow
+USER mlflowuser
+WORKDIR /mlflow
+EXPOSE 5002
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=25s --retries=3 \
+    CMD curl -fsS http://localhost:5002/health || exit 1
+
+CMD mlflow server \
+      --backend-store-uri "$BACKEND_URI" \
+      --default-artifact-root "$ARTIFACT_ROOT" \
+      --host 0.0.0.0 \
+      --port "$MLFLOW_PORT"

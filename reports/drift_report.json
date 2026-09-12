@@ -1,0 +1,476 @@
+{
+  "checked_at": "2026-09-09T09:07:15.884634+00:00",
+  "n_reference": 4750,
+  "n_current": 1019,
+  "current_start": "2022-03-18",
+  "current_end": "2026-04-10",
+  "n_features": 46,
+  "n_moderate": 3,
+  "n_significant": 4,
+  "max_psi": 1.48317,
+  "worst_feature": "volatility_21",
+  "data_drift_detected": true,
+  "features": [
+    {
+      "feature": "volatility_21",
+      "psi": 1.48317,
+      "ks_statistic": 0.12562,
+      "ks_pvalue": 0.0,
+      "reference_mean": 0.033762,
+      "current_mean": 0.030987,
+      "mean_shift_sigma": -0.1385,
+      "severity": "significant"
+    },
+    {
+      "feature": "ATR14_norm",
+      "psi": 0.80803,
+      "ks_statistic": 0.13549,
+      "ks_pvalue": 0.0,
+      "reference_mean": 0.047886,
+      "current_mean": 0.041809,
+      "mean_shift_sigma": -0.2219,
+      "severity": "significant"
+    },
+    {
+      "feature": "log_vol_change",
+      "psi": 0.27109,
+      "ks_statistic": 0.11305,
+      "ks_pvalue": 0.0,
+      "reference_mean": 0.000664,
+      "current_mean": -0.001059,
+      "mean_shift_sigma": -0.004,
+      "severity": "significant"
+    },
+    {
+      "feature": "vol_over_MA20",
+      "psi": 0.2624,
+      "ks_statistic": 0.14286,
+      "ks_pvalue": 0.0,
+      "reference_mean": 1.015115,
+      "current_mean": 0.994159,
+      "mean_shift_sigma": -0.0411,
+      "severity": "significant"
+    },
+    {
+      "feature": "volatility_7",
+      "psi": 0.18502,
+      "ks_statistic": 0.10372,
+      "ks_pvalue": 0.0,
+      "reference_mean": 0.031895,
+      "current_mean": 0.029665,
+      "mean_shift_sigma": -0.0984,
+      "severity": "moderate"
+    },
+    {
+      "feature": "BB_width",
+      "psi": 0.17097,
+      "ks_statistic": 0.08906,
+      "ks_pvalue": 3e-06,
+      "reference_mean": 0.239776,
+      "current_mean": 0.216458,
+      "mean_shift_sigma": -0.1368,
+      "severity": "moderate"
+    },
+    {
+      "feature": "hl_range",
+      "psi": 0.15963,
+      "ks_statistic": 0.10905,
+      "ks_pvalue": 0.0,
+      "reference_mean": 0.044422,
+      "current_mean": 0.037689,
+      "mean_shift_sigma": -0.2104,
+      "severity": "moderate"
+    },
+    {
+      "feature": "MA20_over_MA50",
+      "psi": 0.08975,
+      "ks_statistic": 0.09857,
+      "ks_pvalue": 0.0,
+      "reference_mean": 1.016257,
+      "current_mean": 1.030175,
+      "mean_shift_sigma": 0.1453,
+      "severity": "stable"
+    },
+    {
+      "feature": "gap_open",
+      "psi": 0.08252,
+      "ks_statistic": 0.08029,
+      "ks_pvalue": 3.7e-05,
+      "reference_mean": 0.001425,
+      "current_mean": 0.001537,
+      "mean_shift_sigma": 0.0054,
+      "severity": "stable"
+    },
+    {
+      "feature": "close_over_close_lag_30",
+      "psi": 0.08017,
+      "ks_statistic": 0.08056,
+      "ks_pvalue": 3.5e-05,
+      "reference_mean": 1.056004,
+      "current_mean": 1.077737,
+      "mean_shift_sigma": 0.0929,
+      "severity": "stable"
+    },
+    {
+      "feature": "MACD_signal_norm",
+      "psi": 0.07477,
+      "ks_statistic": 0.09198,
+      "ks_pvalue": 1e-06,
+      "reference_mean": 0.001333,
+      "current_mean": 0.009655,
+      "mean_shift_sigma": 0.1759,
+      "severity": "stable"
+    },
+    {
+      "feature": "MA7_over_MA50",
+      "psi": 0.06614,
+      "ks_statistic": 0.09216,
+      "ks_pvalue": 1e-06,
+      "reference_mean": 1.026452,
+      "current_mean": 1.045854,
+      "mean_shift_sigma": 0.14,
+      "severity": "stable"
+    },
+    {
+      "feature": "ema12_over_ema26",
+      "psi": 0.05601,
+      "ks_statistic": 0.08066,
+      "ks_pvalue": 3.4e-05,
+      "reference_mean": 1.005479,
+      "current_mean": 1.012518,
+      "mean_shift_sigma": 0.1558,
+      "severity": "stable"
+    },
+    {
+      "feature": "MACD_norm",
+      "psi": 0.05599,
+      "ks_statistic": 0.08044,
+      "ks_pvalue": 3.6e-05,
+      "reference_mean": 0.001492,
+      "current_mean": 0.009856,
+      "mean_shift_sigma": 0.1694,
+      "severity": "stable"
+    },
+    {
+      "feature": "close_over_MA50",
+      "psi": 0.05166,
+      "ks_statistic": 0.07895,
+      "ks_pvalue": 5.3e-05,
+      "reference_mean": 1.031825,
+      "current_mean": 1.053651,
+      "mean_shift_sigma": 0.1361,
+      "severity": "stable"
+    },
+    {
+      "feature": "close_over_close_lag_7",
+      "psi": 0.04064,
+      "ks_statistic": 0.06109,
+      "ks_pvalue": 0.003631,
+      "reference_mean": 1.012958,
+      "current_mean": 1.017626,
+      "mean_shift_sigma": 0.0431,
+      "severity": "stable"
+    },
+    {
+      "feature": "RSI14",
+      "psi": 0.03748,
+      "ks_statistic": 0.06947,
+      "ks_pvalue": 0.000573,
+      "reference_mean": 53.043907,
+      "current_mean": 55.184824,
+      "mean_shift_sigma": 0.1646,
+      "severity": "stable"
+    },
+    {
+      "feature": "ret_21d",
+      "psi": 0.03656,
+      "ks_statistic": 0.07062,
+      "ks_pvalue": 0.000437,
+      "reference_mean": 0.038349,
+      "current_mean": 0.053707,
+      "mean_shift_sigma": 0.0817,
+      "severity": "stable"
+    },
+    {
+      "feature": "ret_10d",
+      "psi": 0.03552,
+      "ks_statistic": 0.0531,
+      "ks_pvalue": 0.016885,
+      "reference_mean": 0.018327,
+      "current_mean": 0.025346,
+      "mean_shift_sigma": 0.0551,
+      "severity": "stable"
+    },
+    {
+      "feature": "log_ret_lag_14",
+      "psi": 0.03368,
+      "ks_statistic": 0.04769,
+      "ks_pvalue": 0.042365,
+      "reference_mean": 0.00103,
+      "current_mean": 0.00193,
+      "mean_shift_sigma": 0.0229,
+      "severity": "stable"
+    },
+    {
+      "feature": "close_over_MA7",
+      "psi": 0.0326,
+      "ks_statistic": 0.05708,
+      "ks_pvalue": 0.008073,
+      "reference_mean": 1.003722,
+      "current_mean": 1.006389,
+      "mean_shift_sigma": 0.0492,
+      "severity": "stable"
+    },
+    {
+      "feature": "close_pos_in_range",
+      "psi": 0.0312,
+      "ks_statistic": 0.06275,
+      "ks_pvalue": 0.002565,
+      "reference_mean": 0.506087,
+      "current_mean": 0.537552,
+      "mean_shift_sigma": 0.1031,
+      "severity": "stable"
+    },
+    {
+      "feature": "log_ret",
+      "psi": 0.03112,
+      "ks_statistic": 0.04868,
+      "ks_pvalue": 0.036118,
+      "reference_mean": 0.001045,
+      "current_mean": 0.001992,
+      "mean_shift_sigma": 0.0242,
+      "severity": "stable"
+    },
+    {
+      "feature": "ret_1d",
+      "psi": 0.03112,
+      "ks_statistic": 0.04868,
+      "ks_pvalue": 0.036118,
+      "reference_mean": 0.001815,
+      "current_mean": 0.002529,
+      "mean_shift_sigma": 0.0181,
+      "severity": "stable"
+    },
+    {
+      "feature": "close_over_close_lag_1",
+      "psi": 0.03112,
+      "ks_statistic": 0.04868,
+      "ks_pvalue": 0.036118,
+      "reference_mean": 1.001815,
+      "current_mean": 1.002529,
+      "mean_shift_sigma": 0.0181,
+      "severity": "stable"
+    },
+    {
+      "feature": "log_ret_lag_30",
+      "psi": 0.03085,
+      "ks_statistic": 0.04987,
+      "ks_pvalue": 0.029626,
+      "reference_mean": 0.001033,
+      "current_mean": 0.001954,
+      "mean_shift_sigma": 0.0235,
+      "severity": "stable"
+    },
+    {
+      "feature": "log_ret_lag_2",
+      "psi": 0.03078,
+      "ks_statistic": 0.04847,
+      "ks_pvalue": 0.037386,
+      "reference_mean": 0.001062,
+      "current_mean": 0.002032,
+      "mean_shift_sigma": 0.0247,
+      "severity": "stable"
+    },
+    {
+      "feature": "log_ret_lag_1",
+      "psi": 0.03068,
+      "ks_statistic": 0.04868,
+      "ks_pvalue": 0.036118,
+      "reference_mean": 0.001047,
+      "current_mean": 0.001978,
+      "mean_shift_sigma": 0.0237,
+      "severity": "stable"
+    },
+    {
+      "feature": "log_ret_lag_5",
+      "psi": 0.03048,
+      "ks_statistic": 0.04847,
+      "ks_pvalue": 0.037386,
+      "reference_mean": 0.001041,
+      "current_mean": 0.002019,
+      "mean_shift_sigma": 0.0249,
+      "severity": "stable"
+    },
+    {
+      "feature": "log_ret_lag_3",
+      "psi": 0.03026,
+      "ks_statistic": 0.04847,
+      "ks_pvalue": 0.037386,
+      "reference_mean": 0.001059,
+      "current_mean": 0.002083,
+      "mean_shift_sigma": 0.0261,
+      "severity": "stable"
+    },
+    {
+      "feature": "log_ret_lag_7",
+      "psi": 0.03009,
+      "ks_statistic": 0.04748,
+      "ks_pvalue": 0.043822,
+      "reference_mean": 0.001037,
+      "current_mean": 0.002054,
+      "mean_shift_sigma": 0.0259,
+      "severity": "stable"
+    },
+    {
+      "feature": "oc_change",
+      "psi": 0.02987,
+      "ks_statistic": 0.04177,
+      "ks_pvalue": 0.103539,
+      "reference_mean": 0.000408,
+      "current_mean": 0.001006,
+      "mean_shift_sigma": 0.0177,
+      "severity": "stable"
+    },
+    {
+      "feature": "close_over_close_lag_3",
+      "psi": 0.02834,
+      "ks_statistic": 0.06098,
+      "ks_pvalue": 0.00371,
+      "reference_mean": 1.005512,
+      "current_mean": 1.007574,
+      "mean_shift_sigma": 0.0297,
+      "severity": "stable"
+    },
+    {
+      "feature": "close_over_close_lag_14",
+      "psi": 0.02821,
+      "ks_statistic": 0.07042,
+      "ks_pvalue": 0.000458,
+      "reference_mean": 1.025359,
+      "current_mean": 1.035558,
+      "mean_shift_sigma": 0.0684,
+      "severity": "stable"
+    },
+    {
+      "feature": "ret_5d",
+      "psi": 0.02813,
+      "ks_statistic": 0.05432,
+      "ks_pvalue": 0.01354,
+      "reference_mean": 0.009292,
+      "current_mean": 0.012652,
+      "mean_shift_sigma": 0.0366,
+      "severity": "stable"
+    },
+    {
+      "feature": "close_over_close_lag_5",
+      "psi": 0.02813,
+      "ks_statistic": 0.05432,
+      "ks_pvalue": 0.01354,
+      "reference_mean": 1.009292,
+      "current_mean": 1.012652,
+      "mean_shift_sigma": 0.0366,
+      "severity": "stable"
+    },
+    {
+      "feature": "close_over_close_lag_2",
+      "psi": 0.02601,
+      "ks_statistic": 0.05496,
+      "ks_pvalue": 0.012045,
+      "reference_mean": 1.003661,
+      "current_mean": 1.004995,
+      "mean_shift_sigma": 0.0237,
+      "severity": "stable"
+    },
+    {
+      "feature": "close_over_MA20",
+      "psi": 0.0259,
+      "ks_statistic": 0.07136,
+      "ks_pvalue": 0.000366,
+      "reference_mean": 1.012043,
+      "current_mean": 1.020564,
+      "mean_shift_sigma": 0.0881,
+      "severity": "stable"
+    },
+    {
+      "feature": "BB_pctB",
+      "psi": 0.02092,
+      "ks_statistic": 0.06211,
+      "ks_pvalue": 0.002935,
+      "reference_mean": 0.55007,
+      "current_mean": 0.581064,
+      "mean_shift_sigma": 0.0951,
+      "severity": "stable"
+    },
+    {
+      "feature": "vol_ratio",
+      "psi": 0.01802,
+      "ks_statistic": 0.05122,
+      "ks_pvalue": 0.02354,
+      "reference_mean": 0.951572,
+      "current_mean": 0.963527,
+      "mean_shift_sigma": 0.0393,
+      "severity": "stable"
+    },
+    {
+      "feature": "dollar_vol_z",
+      "psi": 0.01308,
+      "ks_statistic": 0.038,
+      "ks_pvalue": 0.172153,
+      "reference_mean": 0.042951,
+      "current_mean": 0.030254,
+      "mean_shift_sigma": -0.0118,
+      "severity": "stable"
+    },
+    {
+      "feature": "MACD_hist_norm",
+      "psi": 0.008,
+      "ks_statistic": 0.0372,
+      "ks_pvalue": 0.190452,
+      "reference_mean": 0.000159,
+      "current_mean": 0.000201,
+      "mean_shift_sigma": 0.0032,
+      "severity": "stable"
+    },
+    {
+      "feature": "month",
+      "psi": 0.00242,
+      "ks_statistic": 0.01513,
+      "ks_pvalue": 0.988971,
+      "reference_mean": 6.564632,
+      "current_mean": 6.498528,
+      "mean_shift_sigma": -0.0193,
+      "severity": "stable"
+    },
+    {
+      "feature": "dow",
+      "psi": 5e-05,
+      "ks_statistic": 0.00251,
+      "ks_pvalue": 1.0,
+      "reference_mean": 2.023158,
+      "current_mean": 2.027478,
+      "mean_shift_sigma": 0.0031,
+      "severity": "stable"
+    },
+    {
+      "feature": "is_month_end",
+      "psi": 0.0,
+      "ks_statistic": 0.00053,
+      "ks_pvalue": 1.0,
+      "reference_mean": 0.033895,
+      "current_mean": 0.033366,
+      "mean_shift_sigma": -0.0029,
+      "severity": "stable"
+    },
+    {
+      "feature": "is_quarter_end",
+      "psi": 0.0,
+      "ks_statistic": 0.00062,
+      "ks_pvalue": 1.0,
+      "reference_mean": 0.011158,
+      "current_mean": 0.011776,
+      "mean_shift_sigma": 0.0059,
+      "severity": "stable"
+    }
+  ],
+  "model_drift": null
+}

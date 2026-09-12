@@ -1,0 +1,18 @@
+{
+  "model": "drift",
+  "trained_at": "2026-09-12T16:36:22.404880+00:00",
+  "horizon_days": 1,
+  "train_end": "2018-03-02",
+  "test_start": "2022-03-18",
+  "test_end": "2026-04-10",
+  "metrics": {
+    "rmse": 2.997723941172758,
+    "mae": 1.9136237851059807,
+    "mape": 2.38180284292644,
+    "directional_accuracy": 53.83104125736738,
+    "r2": 0.9976568254737482
+  },
+  "naive_rmse": 3.0000280650070015,
+  "mlflow_run_id": "1893fb88f1bb4c09952c79b45f593c52",
+  "min_history_rows": 1
+}

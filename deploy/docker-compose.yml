@@ -1,0 +1,73 @@
+# Reproduces the nvda-net topology from the architecture diagram:
+#   nginx (80/443) -> nvda-api (8000) and -> nvda-mlflow (5002)
+# Only nginx publishes ports; the app and tracking server stay on the internal
+# bridge network, so the EC2 security group only has to open 80/443.
+name: nvda-forecasting
+
+services:
+  nvda-api:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.api
+    image: nvda-api:${IMAGE_TAG:-latest}
+    container_name: nvda-api
+    restart: unless-stopped
+    expose: ["8000"]
+    environment:
+      MLFLOW_TRACKING_URI: http://nvda-mlflow:5002
+      # Leave MODEL_URI unset to serve the baked-in pickle; set it to
+      # models:/nvda-forecaster/Production to pull from the registry instead.
+      MODEL_URI: ${MODEL_URI:-}
+      CORS_ORIGINS: ${CORS_ORIGINS:-*}
+    depends_on:
+      nvda-mlflow:
+        condition: service_healthy
+    networks: [nvda-net]
+    deploy:
+      resources:
+        limits: {cpus: "2.0", memory: 3G}
+    logging:
+      driver: json-file
+      options: {max-size: "10m", max-file: "3"}
+
+  nvda-mlflow:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.mlflow
+    image: nvda-mlflow:${IMAGE_TAG:-latest}
+    container_name: nvda-mlflow
+    restart: unless-stopped
+    expose: ["5002"]
+    environment:
+      BACKEND_URI: sqlite:////mlflow/mlflow.db
+      ARTIFACT_ROOT: ${ARTIFACT_ROOT:-/mlflow/artifacts}
+      AWS_DEFAULT_REGION: ${AWS_REGION:-ap-south-1}
+    volumes:
+      - mlflow-data:/mlflow          # -> EBS volume on EC2
+    networks: [nvda-net]
+    logging:
+      driver: json-file
+      options: {max-size: "10m", max-file: "3"}
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: nvda-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nvda.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./nginx/certs:/etc/nginx/certs:ro
+    depends_on: [nvda-api, nvda-mlflow]
+    networks: [nvda-net]
+    logging:
+      driver: json-file
+      options: {max-size: "10m", max-file: "3"}
+
+networks:
+  nvda-net:
+    driver: bridge
+
+volumes:
+  mlflow-data:

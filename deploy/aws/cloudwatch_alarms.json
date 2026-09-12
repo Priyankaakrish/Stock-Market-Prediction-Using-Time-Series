@@ -1,0 +1,97 @@
+{
+  "_comment": [
+    "CloudWatch alarms for the Monitoring & Observability box. Apply with:",
+    "  aws cloudwatch put-metric-alarm --cli-input-json file://<each alarm>",
+    "All alarms publish to the SNS topic in AlarmActions; create it first with",
+    "  aws sns create-topic --name nvda-forecasting-alerts",
+    "Metrics come from two sources: the CloudWatch agent (system), and",
+    "src/drift.py cloudwatch_metrics() / the API's /metrics endpoint (model)."
+  ],
+  "sns_topic": "arn:aws:sns:ap-south-1:REPLACE-ACCOUNT:nvda-forecasting-alerts",
+  "alarms": [
+    {
+      "AlarmName": "nvda-api-error-rate",
+      "AlarmDescription": "Forecast errors over 5% of requests for 10 minutes.",
+      "Namespace": "NVDA/Forecasting",
+      "MetricName": "nvda_forecast_errors_total",
+      "Statistic": "Sum",
+      "Period": 300,
+      "EvaluationPeriods": 2,
+      "Threshold": 5,
+      "ComparisonOperator": "GreaterThanThreshold",
+      "TreatMissingData": "notBreaching"
+    },
+    {
+      "AlarmName": "nvda-api-latency",
+      "AlarmDescription": "Mean forecast latency above 2s. Feature building on a cold cache is the usual cause.",
+      "Namespace": "NVDA/Forecasting",
+      "MetricName": "nvda_forecast_latency_ms_avg",
+      "Statistic": "Average",
+      "Period": 300,
+      "EvaluationPeriods": 2,
+      "Threshold": 2000,
+      "ComparisonOperator": "GreaterThanThreshold",
+      "TreatMissingData": "notBreaching"
+    },
+    {
+      "AlarmName": "nvda-model-not-loaded",
+      "AlarmDescription": "The service is answering health checks with no model in memory.",
+      "Namespace": "NVDA/Forecasting",
+      "MetricName": "nvda_model_loaded",
+      "Statistic": "Minimum",
+      "Period": 60,
+      "EvaluationPeriods": 3,
+      "Threshold": 1,
+      "ComparisonOperator": "LessThanThreshold",
+      "TreatMissingData": "breaching"
+    },
+    {
+      "AlarmName": "nvda-implausible-predictions",
+      "AlarmDescription": "Over 1% of forecasts imply a daily move beyond +/-10%. The model has started emitting nonsense while still returning 200s.",
+      "Namespace": "NVDA/Forecasting",
+      "MetricName": "nvda_prediction_implausible_rate_pct",
+      "Statistic": "Average",
+      "Period": 900,
+      "EvaluationPeriods": 2,
+      "Threshold": 1.0,
+      "ComparisonOperator": "GreaterThanThreshold",
+      "TreatMissingData": "notBreaching"
+    },
+    {
+      "AlarmName": "nvda-data-drift",
+      "AlarmDescription": "Max PSI above 0.25 against the training distribution. Retrain, or accept that inputs no longer resemble the fitted data.",
+      "Namespace": "NVDA/Forecasting",
+      "MetricName": "DataDriftMaxPSI",
+      "Statistic": "Maximum",
+      "Period": 86400,
+      "EvaluationPeriods": 1,
+      "Threshold": 0.25,
+      "ComparisonOperator": "GreaterThanThreshold",
+      "TreatMissingData": "missing"
+    },
+    {
+      "AlarmName": "nvda-model-worse-than-naive",
+      "AlarmDescription": "Live RMSE now exceeds the random walk on the same window. Given this project's evaluation, that means the deployed model has negative value and should be rolled back.",
+      "Namespace": "NVDA/Forecasting",
+      "MetricName": "ModelRMSEvsNaive",
+      "Statistic": "Average",
+      "Period": 86400,
+      "EvaluationPeriods": 2,
+      "Threshold": 1.0,
+      "ComparisonOperator": "GreaterThanThreshold",
+      "TreatMissingData": "missing"
+    },
+    {
+      "AlarmName": "nvda-disk-pressure",
+      "AlarmDescription": "EBS volume holding mlflow.db above 85% used.",
+      "Namespace": "NVDA/Forecasting",
+      "MetricName": "disk_used_percent",
+      "Statistic": "Average",
+      "Period": 300,
+      "EvaluationPeriods": 2,
+      "Threshold": 85,
+      "ComparisonOperator": "GreaterThanThreshold",
+      "TreatMissingData": "notBreaching"
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+# Full training environment.
+numpy>=1.26
+pandas>=2.2
+scipy>=1.11
+scikit-learn>=1.4
+statsmodels>=0.14
+xgboost>=2.0
+prophet>=1.1.5
+torch>=2.2
+matplotlib>=3.8
+mlflow>=3.0,<4
+yfinance>=0.2.40
+joblib>=1.3
+fastapi>=0.110
+uvicorn[standard]>=0.29
+gunicorn>=21.2
+pydantic>=2.6
+
+# AWS data-lake path. boto3 for the S3 client; s3fs because pandas delegates
+# s3:// paths to it and fails with an opaque import error otherwise.
+boto3>=1.34
+s3fs>=2024.3
+
+# Optional: big-data path (AWS EMR / local Spark)
+# pyspark>=3.5

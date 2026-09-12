@@ -1,0 +1,23 @@
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+.pytest_cache/
+.coverage
+htmlcov/
+.ruff_cache/
+.ipynb_checkpoints/
+
+# Data and artefacts: regenerate with `make pipeline`, do not commit.
+data/processed/*.csv
+models/*.pkl
+mlruns/
+mlartifacts/
+mlflow.db
+reports/figures/*.png
+reports/*.csv
+deploy/nginx/certs/
+
+# Keep the raw snapshot so CI can train without network access.
+!data/raw/nvda_raw.csv
