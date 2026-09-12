@@ -28,10 +28,11 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
+          # CPU-only torch: the default PyPI wheel drags several GB of CUDA
+          # onto a runner with no GPU, which is most of the install time.
           pip install torch --index-url https://download.pytorch.org/whl/cpu
           pip install -r requirements.txt
           pip install pytest pytest-cov ruff moto
-          
       - name: Lint
         run: ruff check src api tests
 
