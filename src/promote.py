@@ -197,7 +197,7 @@ def main() -> None:
         for v in list_versions():
             alias = f"  [{', '.join(v['aliases'])}]" if v["aliases"] else ""
             rmse = f"{v['test_rmse']:.4f}" if v["test_rmse"] else "n/a"
-            print(f"v{str(v['version']):<3} rmse={rmse:<10}{alias}")
+            print(f"v{v['version']!s:<3} rmse={rmse:<10}{alias}")
         prod = current_production()
         print(f"\nProduction: {'v' + str(prod.version) if prod else 'none assigned'}")
     elif args.action == "check":

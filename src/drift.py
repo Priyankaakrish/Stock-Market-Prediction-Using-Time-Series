@@ -23,7 +23,7 @@ from __future__ import annotations
 import json
 import logging
 from dataclasses import asdict, dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import numpy as np
 import pandas as pd
@@ -190,7 +190,7 @@ def build_report(reference, current, model=None, baseline_rmse=None, save=True):
             log.warning("Model drift check failed: %s", err)
 
     report = DriftReport(
-        checked_at=datetime.now(timezone.utc).isoformat(),
+        checked_at=datetime.now(UTC).isoformat(),
         n_reference=len(reference),
         n_current=len(current),
         current_start=str(pd.Timestamp(current["Date"].iloc[0]).date()),
