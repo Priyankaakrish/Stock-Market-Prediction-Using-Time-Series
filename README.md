@@ -932,10 +932,22 @@ What is *not* worth trying: more technical indicators, deeper networks, or more 
 
 ---
 
-## ⚖️ Disclaimer
+## Live Resources
 
-Research and educational use only. **Nothing here is investment advice.** A next-day price forecast — particularly one that does not beat a random walk — must not be used to make trading decisions.
+## Live Resources
 
+| Service | Location |
+|---|---|
+| S3 data lake — raw | `s3://<bucket>/raw/nvda/ingest_date=YYYY-MM-DD/` |
+| S3 data lake — processed | `s3://<bucket>/processed/nvda/year=YYYY/month=M/` |
+| S3 — MLflow artifacts | `s3://<bucket>/mlflow-artifacts/` |
+| FastAPI Swagger UI | `http://localhost:8000/docs` |
+| FastAPI Health | `http://localhost:8000/health` |
+| MLflow UI | `http://localhost:5002` |
+
+> No public EC2 endpoint is listed because none is deployed. The S3 resources
+> above are live in ap-south-1.
+> 
 ## 📄 License
 
 MIT License — feel free to fork and build on this.
