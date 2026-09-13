@@ -942,7 +942,7 @@ What is *not* worth trying: more technical indicators, deeper networks, or more 
 
 | Service | URL |
 |---|---|
-| FastAPI Swagger UI | https://nvda-forecasting.onrender.com/docs |
+| FastAPI Swagger UI | http://13.233.91.41:8000/docs|
 | Health check | https://nvda-forecasting.onrender.com/health |
 | MLflow UI | https://localhost:5002
 | Forecast |  https://nvda-forecasting.onrender.com/forecast |
