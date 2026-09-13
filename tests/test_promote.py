@@ -1,14 +1,36 @@
 """Tests for the model approval gate."""
 from __future__ import annotations
 
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from src import promote
 
 
+class _FakeVersion:
+    """Stands in for an mlflow ModelVersion."""
+
+    def __init__(self, version="1"):
+        self.version = version
+        self.run_id = "fake-run"
+        self.aliases = []
+        self.tags = {}
+
+
 def _gate(rmse, mape, naive, incumbent=None):
+    """Evaluate the gate with the registry fully mocked.
+
+    The earlier version patched only the metrics lookup, so `evaluate_gate`
+    still called `search_model_versions` against a real MLflow store. That
+    passed locally, where a trained model happened to be registered, and failed
+    in CI with "No versions registered" — a test that depended on the
+    developer's machine rather than on the code under test.
+    """
     metrics = {"best_test_rmse": rmse, "best_test_mape": mape, "naive_test_rmse": naive}
-    with patch.object(promote, "_metrics_for", return_value=metrics), \
+    fake_client = MagicMock()
+    fake_client.search_model_versions.return_value = [_FakeVersion()]
+
+    with patch.object(promote, "_client", return_value=fake_client), \
+         patch.object(promote, "_metrics_for", return_value=metrics), \
          patch.object(promote, "current_production", return_value=incumbent):
         return promote.evaluate_gate()
 
@@ -142,7 +164,24 @@ class TestPipelineStages:
         assert "vs naive" in detail
 
 
+def _has_production_alias() -> bool:
+    try:
+        import mlflow
+        from mlflow.tracking import MlflowClient
+
+        from src.config import MLFLOW
+
+        mlflow.set_tracking_uri(MLFLOW.tracking_uri)
+        MlflowClient().get_model_version_by_alias(
+            MLFLOW.registered_model, "Production")
+        return True
+    except Exception:
+        return False
+
+
 class TestServingVerification:
+    @pytest.mark.skipif(not _has_production_alias(),
+                        reason="no Production alias; run src.promote promote")
     def test_resolves_the_alias_and_predicts(self):
         from src.pipeline import _stage_verify_serving
 

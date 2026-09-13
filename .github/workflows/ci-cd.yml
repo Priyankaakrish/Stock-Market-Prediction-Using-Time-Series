@@ -33,8 +33,10 @@ jobs:
           # that download is most of the job's runtime.
           pip install torch --index-url https://download.pytorch.org/whl/cpu
           pip install -r requirements.txt
-          # moto backs the S3 tests; without it they fail at import.
-          pip install pytest pytest-cov ruff moto
+          # moto backs the S3 tests; httpx2 is what starlette's TestClient
+          # needs, and neither is a runtime dependency so neither is in
+          # requirements.txt.
+          pip install pytest pytest-cov ruff moto httpx2
 
       - name: Lint
         run: ruff check src api tests
