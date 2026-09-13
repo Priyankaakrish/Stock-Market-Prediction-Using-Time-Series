@@ -945,7 +945,15 @@ What is *not* worth trying: more technical indicators, deeper networks, or more 
 
 > No public EC2 endpoint is listed because none is deployed. The S3 resources
 > above are live in ap-south-1.
-> 
+
+## Live Endpoints
+
+| Service | URL |
+|---|---|
+| FastAPI Swagger UI | https://nvda-forecasting.onrender.com/docs |
+| Health check | https://nvda-forecasting.onrender.com/health |
+| Forecast | `POST https://nvda-forecasting.onrender.com/forecast` |
+
 ## 📄 License
 
 MIT License — feel free to fork and build on this.
