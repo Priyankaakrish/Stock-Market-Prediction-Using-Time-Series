@@ -45,6 +45,12 @@ needs_registry = pytest.mark.skipif(
     not _registry_ready(), reason="no Production alias; run src.promote promote")
 
 
+needs_pickle = pytest.mark.skipif(
+    not PATHS.best_model.exists(),
+    reason="no trained model; run `python -m src.train --fast`")
+
+
+@needs_pickle
 class TestPickleMode:
     def test_serves(self, monkeypatch):
         with _client(monkeypatch, None) as c:
