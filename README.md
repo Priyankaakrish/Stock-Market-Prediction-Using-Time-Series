@@ -3,8 +3,13 @@
 
 End-to-end time-series ML pipeline for forecasting NVIDIA (NVDA) stock prices using **ARIMA, Prophet, XGBoost, and LSTM** — benchmarked against random-walk baselines, served via FastAPI, tracked with MLflow, and deployed on AWS EC2 with Docker Compose and Nginx.
 
-`Python 3.12` · `FastAPI` · `MLflow 3` · `Docker` · `AWS` · `PyTorch` · `XGBoost` · `Prophet` · `PySpark`
-
+![Python](https://img.shields.io/badge/Python-3.12-blue?logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.110+-green?logo=fastapi&logoColor=white)
+![MLflow](https://img.shields.io/badge/MLflow-3.x-orange?logo=mlflow&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-Compose-blue?logo=docker&logoColor=white)
+![AWS](https://img.shields.io/badge/AWS-S3%20%7C%20IAM-orange?logo=amazonaws&logoColor=white)
+![PyTorch](https://img.shields.io/badge/PyTorch-CPU-red?logo=pytorch&logoColor=white)
+![Tests](https://img.shields.io/badge/tests-110%20passing-brightgreen)
 ---
 
 ## 📌 Table of Contents
