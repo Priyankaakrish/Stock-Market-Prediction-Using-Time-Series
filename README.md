@@ -8,9 +8,6 @@
 ![Docker](https://img.shields.io/badge/Docker-Compose-blue?logo=docker)
 ![PyTorch](https://img.shields.io/badge/PyTorch-CPU-red?logo=pytorch)
 
-> **Credit:** this project is an NVIDIA adaptation of [Goldman Sachs Stock Price Prediction](https://github.com/suhas-crypto/Goldman_Sachs_stock_price_prediction) by Suhas G, published under the MIT License. The structure, models and deployment setup come from that project; the changes needed for NVIDIA are listed in [What changed for NVIDIA](#what-changed-for-nvidia).
-
----
 
 ## 📌 Table of Contents
 
@@ -333,4 +330,4 @@ For education and portfolio use only. Not financial advice.
 
 ## License
 
-MIT License. Based on [Goldman Sachs Stock Price Prediction](https://github.com/suhas-crypto/Goldman_Sachs_stock_price_prediction) by Suhas G (MIT). See `LICENSE`.
+MIT License
