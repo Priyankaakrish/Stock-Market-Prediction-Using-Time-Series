@@ -1,0 +1,1 @@
+{'arima': 0.004, 'prophet': 0.383, 'lstm': 0.613, 'xgboost': 0.0}

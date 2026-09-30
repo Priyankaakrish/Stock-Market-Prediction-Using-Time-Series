@@ -3,7 +3,3 @@ __pycache__/
 .pytest_cache/
 venv/
 .env
-logs/*
-!logs/.gitkeep
-mlruns/*
-!mlruns/.gitkeep

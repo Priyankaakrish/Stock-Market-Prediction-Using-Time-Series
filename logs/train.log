@@ -1,0 +1,389 @@
+2026-09-29 22:26:06,523 | INFO     | train_pipeline | === STEP 1: Load & Merge Data Sources ===
+2026-09-29 22:26:06,547 | INFO     | src.data.loader | Loaded 6964 rows from nvda_master_dataset.csv
+2026-09-29 22:26:06,577 | INFO     | src.data.loader | Loaded 6964 rows from nvda_yahoo_finance.csv
+2026-09-29 22:26:06,597 | INFO     | src.data.loader | Combined dataset: 6964 trading days (1999-01-22 -> 2026-09-29)
+2026-09-29 22:26:06,710 | INFO     | src.data.preprocessor | Outliers in Volume: 2 rows replaced
+2026-09-29 22:26:06,710 | INFO     | src.data.preprocessor | Clean data: 7222 rows, 8 columns
+2026-09-29 22:26:06,745 | INFO     | src.features.engineer | Technical indicators added: 51 features
+2026-09-29 22:26:06,828 | INFO     | src.features.engineer | Feature set built: 7201 rows (dropped 21 NaN rows), 123 features
+2026-09-29 22:26:06,828 | INFO     | train_pipeline | Feature matrix: 7201 rows × 123 columns
+2026-09-29 22:26:06,828 | INFO     | src.data.preprocessor | Split -> train: 5040 | val: 1080 | test: 1081
+2026-09-29 22:26:06,828 | INFO     | train_pipeline | Model inputs: 61 scale-free features
+2026-09-29 22:26:06,828 | INFO     | train_pipeline | === STEP 2: ARIMA (log price) ===
+2026-09-29 22:26:08,776 | INFO     | src.models.arima_model | Running auto_arima (pmdarima) — max_p=3 max_q=3 seasonal=False …
+2026-09-29 22:26:09,377 | INFO     | src.models.arima_model | auto_arima -> order=(1, 1, 0) seasonal=(0, 0, 0, 0) AIC=-2200.88
+2026-09-29 22:26:09,446 | INFO     | src.models.arima_model | ARIMA(1, 1, 0) on log-price fitted (trend=t, AIC=-2200.88)
+2026-09-29 22:26:09,555 | INFO     | src.models.arima_model | ARIMA(1, 1, 0) on log-price fitted (trend=t, AIC=-2172.31)
+2026-09-29 22:26:09,558 | INFO     | src.models.arima_model | ARIMA model saved -> C:\Users\DellG7\Downloads\nvda_stock_prediction\nvda_stock_prediction\models_saved\arima_model.pkl
+2026-09-29 22:26:09,642 | INFO     | train_pipeline | === STEP 3: Prophet (log price) ===
+2026-09-29 22:26:10,095 | INFO     | cmdstanpy | Chain [1] start processing
+2026-09-29 22:26:13,121 | INFO     | cmdstanpy | Chain [1] done processing
+2026-09-29 22:26:13,125 | INFO     | src.models.prophet_model | Prophet fitted on 5040 rows, last date: 2018-06-18 00:00:00
+2026-09-29 22:26:13,875 | INFO     | cmdstanpy | Chain [1] start processing
+2026-09-29 22:26:17,345 | INFO     | cmdstanpy | Chain [1] done processing
+2026-09-29 22:26:17,359 | INFO     | src.models.prophet_model | Prophet fitted on 6120 rows, last date: 2022-08-08 00:00:00
+2026-09-29 22:26:18,448 | INFO     | cmdstanpy | Chain [1] start processing
+2026-09-29 22:26:23,433 | INFO     | cmdstanpy | Chain [1] done processing
+2026-09-29 22:26:23,456 | INFO     | src.models.prophet_model | Prophet fitted on 7201 rows, last date: 2026-09-29 00:00:00
+2026-09-29 22:26:23,488 | INFO     | src.models.prophet_model | Prophet model saved -> C:\Users\DellG7\Downloads\nvda_stock_prediction\nvda_stock_prediction\models_saved\prophet_model.json
+2026-09-29 22:26:23,489 | INFO     | train_pipeline | === STEP 4: Bidirectional LSTM (next-day return) ===
+2026-09-29 22:26:23,605 | INFO     | src.data.preprocessor | Scalers saved -> C:\Users\DellG7\Downloads\nvda_stock_prediction\nvda_stock_prediction\models_saved\feature_scaler.pkl
+2026-09-29 22:26:23,738 | INFO     | src.models.lstm_model | LSTM backend: torch
+2026-09-29 22:27:35,851 | INFO     | src.models.lstm_model | Epoch  10/100 | loss=2.033108 | val_loss=1.883993
+2026-09-29 22:28:43,925 | INFO     | src.models.lstm_model | Epoch  20/100 | loss=2.010056 | val_loss=1.887106
+2026-09-29 22:29:48,916 | INFO     | src.models.lstm_model | Epoch  30/100 | loss=1.890521 | val_loss=2.018240
+2026-09-29 22:30:09,976 | INFO     | src.models.lstm_model | Early stopping at epoch 33 (val_loss=1.874082)
+2026-09-29 22:30:09,978 | INFO     | src.models.lstm_model | PyTorch LSTM training complete — best val_loss=1.874082
+2026-09-29 22:30:09,996 | INFO     | src.models.lstm_model | PyTorch LSTM saved -> C:\Users\DellG7\Downloads\nvda_stock_prediction\nvda_stock_prediction\models_saved\lstm_model.pt
+2026-09-29 22:30:13,717 | INFO     | train_pipeline | === STEP 5: XGBOOST (next-day return) ===
+2026-09-29 22:31:51,201 | INFO     | src.models.xgboost_model | Optuna optimisation done — best RMSE=0.0314, params={'eta': 0.012727774599544847, 'max_depth': 10, 'min_child_weight': 3, 'subsample': 0.9987349142404869, 'colsample_bytree': 0.6742375624326927, 'lambda': 0.0247340620341111, 'alpha': 0.007477709441612112}
+2026-09-29 22:31:53,536 | INFO     | src.models.xgboost_model | XGBOOST model fitted.
+2026-09-29 22:31:53,560 | INFO     | src.models.xgboost_model | XGBOOST model saved -> C:\Users\DellG7\Downloads\nvda_stock_prediction\nvda_stock_prediction\models_saved\xgboost_model.pkl
+2026-09-29 22:31:53,582 | INFO     | train_pipeline | === STEP 6: Ensemble ===
+2026-09-29 22:31:53,612 | INFO     | src.models.ensemble | Ensemble weights optimised -> {'arima': 0.003972124553378991, 'prophet': 0.38345354968177686, 'lstm': 0.612574325764844, 'xgboost': 2.846030702774449e-19} (RMSE=0.4750)
+2026-09-29 22:31:53,614 | INFO     | src.models.ensemble | Ensemble weights saved -> C:\Users\DellG7\Downloads\nvda_stock_prediction\nvda_stock_prediction\models_saved\ensemble_weights.pkl
+2026-09-29 22:31:53,628 | INFO     | src.evaluation.metrics | === arima [val] Metrics ===
+2026-09-29 22:31:53,628 | INFO     | src.evaluation.metrics |   MAE                       0.2895
+2026-09-29 22:31:53,628 | INFO     | src.evaluation.metrics |   RMSE                      0.4791
+2026-09-29 22:31:53,628 | INFO     | src.evaluation.metrics |   MAPE                      2.3188
+2026-09-29 22:31:53,628 | INFO     | src.evaluation.metrics |   SMAPE                     2.3055
+2026-09-29 22:31:53,628 | INFO     | src.evaluation.metrics |   R2                        0.9961
+2026-09-29 22:31:53,630 | INFO     | src.evaluation.metrics |   Explained_Variance        0.9961
+2026-09-29 22:31:53,630 | INFO     | src.evaluation.metrics |   Directional_Accuracy      52.5000
+2026-09-29 22:31:53,630 | INFO     | src.evaluation.metrics |   Sharpe_Ratio              0.8319
+2026-09-29 22:31:53,630 | INFO     | src.evaluation.metrics |   Max_Drawdown_pct          -52.2844
+2026-09-29 22:31:53,630 | INFO     | src.evaluation.metrics |   IC                        0.9976
+2026-09-29 22:31:53,636 | INFO     | src.evaluation.metrics | === prophet [val] Metrics ===
+2026-09-29 22:31:53,636 | INFO     | src.evaluation.metrics |   MAE                       0.2901
+2026-09-29 22:31:53,636 | INFO     | src.evaluation.metrics |   RMSE                      0.4762
+2026-09-29 22:31:53,637 | INFO     | src.evaluation.metrics |   MAPE                      2.3466
+2026-09-29 22:31:53,637 | INFO     | src.evaluation.metrics |   SMAPE                     2.3352
+2026-09-29 22:31:53,637 | INFO     | src.evaluation.metrics |   R2                        0.9962
+2026-09-29 22:31:53,637 | INFO     | src.evaluation.metrics |   Explained_Variance        0.9962
+2026-09-29 22:31:53,637 | INFO     | src.evaluation.metrics |   Directional_Accuracy      50.0000
+2026-09-29 22:31:53,638 | INFO     | src.evaluation.metrics |   Sharpe_Ratio              0.5200
+2026-09-29 22:31:53,638 | INFO     | src.evaluation.metrics |   Max_Drawdown_pct          -56.3191
+2026-09-29 22:31:53,638 | INFO     | src.evaluation.metrics |   IC                        0.9976
+2026-09-29 22:31:53,643 | INFO     | src.evaluation.metrics | === lstm [val] Metrics ===
+2026-09-29 22:31:53,644 | INFO     | src.evaluation.metrics |   MAE                       0.2883
+2026-09-29 22:31:53,644 | INFO     | src.evaluation.metrics |   RMSE                      0.4755
+2026-09-29 22:31:53,644 | INFO     | src.evaluation.metrics |   MAPE                      2.3202
+2026-09-29 22:31:53,645 | INFO     | src.evaluation.metrics |   SMAPE                     2.3128
+2026-09-29 22:31:53,645 | INFO     | src.evaluation.metrics |   R2                        0.9962
+2026-09-29 22:31:53,645 | INFO     | src.evaluation.metrics |   Explained_Variance        0.9962
+2026-09-29 22:31:53,645 | INFO     | src.evaluation.metrics |   Directional_Accuracy      51.6667
+2026-09-29 22:31:53,645 | INFO     | src.evaluation.metrics |   Sharpe_Ratio              1.0658
+2026-09-29 22:31:53,645 | INFO     | src.evaluation.metrics |   Max_Drawdown_pct          -45.7116
+2026-09-29 22:31:53,647 | INFO     | src.evaluation.metrics |   IC                        0.9976
+2026-09-29 22:31:53,652 | INFO     | src.evaluation.metrics | === xgboost [val] Metrics ===
+2026-09-29 22:31:53,652 | INFO     | src.evaluation.metrics |   MAE                       0.2897
+2026-09-29 22:31:53,652 | INFO     | src.evaluation.metrics |   RMSE                      0.4793
+2026-09-29 22:31:53,652 | INFO     | src.evaluation.metrics |   MAPE                      2.3116
+2026-09-29 22:31:53,652 | INFO     | src.evaluation.metrics |   SMAPE                     2.3064
+2026-09-29 22:31:53,652 | INFO     | src.evaluation.metrics |   R2                        0.9961
+2026-09-29 22:31:53,658 | INFO     | src.evaluation.metrics |   Explained_Variance        0.9961
+2026-09-29 22:31:53,658 | INFO     | src.evaluation.metrics |   Directional_Accuracy      51.7593
+2026-09-29 22:31:53,658 | INFO     | src.evaluation.metrics |   Sharpe_Ratio              1.2877
+2026-09-29 22:31:53,658 | INFO     | src.evaluation.metrics |   Max_Drawdown_pct          -42.3869
+2026-09-29 22:31:53,660 | INFO     | src.evaluation.metrics |   IC                        0.9977
+2026-09-29 22:31:53,666 | INFO     | src.evaluation.metrics | === ensemble [val] Metrics ===
+2026-09-29 22:31:53,666 | INFO     | src.evaluation.metrics |   MAE                       0.2882
+2026-09-29 22:31:53,666 | INFO     | src.evaluation.metrics |   RMSE                      0.4750
+2026-09-29 22:31:53,668 | INFO     | src.evaluation.metrics |   MAPE                      2.3229
+2026-09-29 22:31:53,668 | INFO     | src.evaluation.metrics |   SMAPE                     2.3139
+2026-09-29 22:31:53,668 | INFO     | src.evaluation.metrics |   R2                        0.9962
+2026-09-29 22:31:53,668 | INFO     | src.evaluation.metrics |   Explained_Variance        0.9962
+2026-09-29 22:31:53,668 | INFO     | src.evaluation.metrics |   Directional_Accuracy      51.2037
+2026-09-29 22:31:53,668 | INFO     | src.evaluation.metrics |   Sharpe_Ratio              0.7096
+2026-09-29 22:31:53,670 | INFO     | src.evaluation.metrics |   Max_Drawdown_pct          -56.0824
+2026-09-29 22:31:53,670 | INFO     | src.evaluation.metrics |   IC                        0.9976
+2026-09-29 22:31:53,674 | INFO     | src.evaluation.metrics | === naive_last_close [val] Metrics ===
+2026-09-29 22:31:53,674 | INFO     | src.evaluation.metrics |   MAE                       0.2886
+2026-09-29 22:31:53,674 | INFO     | src.evaluation.metrics |   RMSE                      0.4764
+2026-09-29 22:31:53,676 | INFO     | src.evaluation.metrics |   MAPE                      2.3230
+2026-09-29 22:31:53,676 | INFO     | src.evaluation.metrics |   SMAPE                     2.3186
+2026-09-29 22:31:53,677 | INFO     | src.evaluation.metrics |   R2                        0.9962
+2026-09-29 22:31:53,677 | INFO     | src.evaluation.metrics |   Explained_Variance        0.9962
+2026-09-29 22:31:53,678 | INFO     | src.evaluation.metrics |   Directional_Accuracy      3.7037
+2026-09-29 22:31:53,678 | INFO     | src.evaluation.metrics |   Sharpe_Ratio              nan
+2026-09-29 22:31:53,678 | INFO     | src.evaluation.metrics |   Max_Drawdown_pct          0.0000
+2026-09-29 22:31:53,679 | INFO     | src.evaluation.metrics |   IC                        0.9976
+2026-09-29 22:31:53,685 | INFO     | src.evaluation.metrics | === arima [test] Metrics ===
+2026-09-29 22:31:53,687 | INFO     | src.evaluation.metrics |   MAE                       2.2121
+2026-09-29 22:31:53,687 | INFO     | src.evaluation.metrics |   RMSE                      3.3835
+2026-09-29 22:31:53,687 | INFO     | src.evaluation.metrics |   MAPE                      2.1780
+2026-09-29 22:31:53,687 | INFO     | src.evaluation.metrics |   SMAPE                     2.1754
+2026-09-29 22:31:53,687 | INFO     | src.evaluation.metrics |   R2                        0.9975
+2026-09-29 22:31:53,687 | INFO     | src.evaluation.metrics |   Explained_Variance        0.9975
+2026-09-29 22:31:53,687 | INFO     | src.evaluation.metrics |   Directional_Accuracy      50.7863
+2026-09-29 22:31:53,689 | INFO     | src.evaluation.metrics |   Sharpe_Ratio              1.3908
+2026-09-29 22:31:53,689 | INFO     | src.evaluation.metrics |   Max_Drawdown_pct          -34.0443
+2026-09-29 22:31:53,689 | INFO     | src.evaluation.metrics |   IC                        0.9978
+2026-09-29 22:31:53,706 | INFO     | src.evaluation.metrics | === prophet [test] Metrics ===
+2026-09-29 22:31:53,706 | INFO     | src.evaluation.metrics |   MAE                       2.2263
+2026-09-29 22:31:53,706 | INFO     | src.evaluation.metrics |   RMSE                      3.3885
+2026-09-29 22:31:53,706 | INFO     | src.evaluation.metrics |   MAPE                      2.1721
+2026-09-29 22:31:53,706 | INFO     | src.evaluation.metrics |   SMAPE                     2.1736
+2026-09-29 22:31:53,706 | INFO     | src.evaluation.metrics |   R2                        0.9975
+2026-09-29 22:31:53,706 | INFO     | src.evaluation.metrics |   Explained_Variance        0.9975
+2026-09-29 22:31:53,706 | INFO     | src.evaluation.metrics |   Directional_Accuracy      49.0287
+2026-09-29 22:31:53,706 | INFO     | src.evaluation.metrics |   Sharpe_Ratio              1.5672
+2026-09-29 22:31:53,706 | INFO     | src.evaluation.metrics |   Max_Drawdown_pct          -36.1798
+2026-09-29 22:31:53,706 | INFO     | src.evaluation.metrics |   IC                        0.9978
+2026-09-29 22:31:53,711 | INFO     | src.evaluation.metrics | === lstm [test] Metrics ===
+2026-09-29 22:31:53,711 | INFO     | src.evaluation.metrics |   MAE                       2.2123
+2026-09-29 22:31:53,711 | INFO     | src.evaluation.metrics |   RMSE                      3.3907
+2026-09-29 22:31:53,711 | INFO     | src.evaluation.metrics |   MAPE                      2.1747
+2026-09-29 22:31:53,711 | INFO     | src.evaluation.metrics |   SMAPE                     2.1773
+2026-09-29 22:31:53,711 | INFO     | src.evaluation.metrics |   R2                        0.9975
+2026-09-29 22:31:53,711 | INFO     | src.evaluation.metrics |   Explained_Variance        0.9975
+2026-09-29 22:31:53,724 | INFO     | src.evaluation.metrics |   Directional_Accuracy      50.0463
+2026-09-29 22:31:53,724 | INFO     | src.evaluation.metrics |   Sharpe_Ratio              1.2344
+2026-09-29 22:31:53,724 | INFO     | src.evaluation.metrics |   Max_Drawdown_pct          -36.9300
+2026-09-29 22:31:53,724 | INFO     | src.evaluation.metrics |   IC                        0.9977
+2026-09-29 22:31:53,728 | INFO     | src.evaluation.metrics | === xgboost [test] Metrics ===
+2026-09-29 22:31:53,728 | INFO     | src.evaluation.metrics |   MAE                       2.2090
+2026-09-29 22:31:53,728 | INFO     | src.evaluation.metrics |   RMSE                      3.3968
+2026-09-29 22:31:53,728 | INFO     | src.evaluation.metrics |   MAPE                      2.1627
+2026-09-29 22:31:53,728 | INFO     | src.evaluation.metrics |   SMAPE                     2.1664
+2026-09-29 22:31:53,728 | INFO     | src.evaluation.metrics |   R2                        0.9975
+2026-09-29 22:31:53,728 | INFO     | src.evaluation.metrics |   Explained_Variance        0.9975
+2026-09-29 22:31:53,728 | INFO     | src.evaluation.metrics |   Directional_Accuracy      49.3062
+2026-09-29 22:31:53,728 | INFO     | src.evaluation.metrics |   Sharpe_Ratio              1.0455
+2026-09-29 22:31:53,728 | INFO     | src.evaluation.metrics |   Max_Drawdown_pct          -50.8970
+2026-09-29 22:31:53,728 | INFO     | src.evaluation.metrics |   IC                        0.9978
+2026-09-29 22:31:53,750 | INFO     | src.evaluation.metrics | === ensemble [test] Metrics ===
+2026-09-29 22:31:53,750 | INFO     | src.evaluation.metrics |   MAE                       2.2100
+2026-09-29 22:31:53,750 | INFO     | src.evaluation.metrics |   RMSE                      3.3829
+2026-09-29 22:31:53,750 | INFO     | src.evaluation.metrics |   MAPE                      2.1664
+2026-09-29 22:31:53,750 | INFO     | src.evaluation.metrics |   SMAPE                     2.1686
+2026-09-29 22:31:53,750 | INFO     | src.evaluation.metrics |   R2                        0.9975
+2026-09-29 22:31:53,750 | INFO     | src.evaluation.metrics |   Explained_Variance        0.9975
+2026-09-29 22:31:53,750 | INFO     | src.evaluation.metrics |   Directional_Accuracy      50.6013
+2026-09-29 22:31:53,750 | INFO     | src.evaluation.metrics |   Sharpe_Ratio              1.4424
+2026-09-29 22:31:53,750 | INFO     | src.evaluation.metrics |   Max_Drawdown_pct          -37.9557
+2026-09-29 22:31:53,750 | INFO     | src.evaluation.metrics |   IC                        0.9978
+2026-09-29 22:31:53,769 | INFO     | src.evaluation.metrics | === naive_last_close [test] Metrics ===
+2026-09-29 22:31:53,769 | INFO     | src.evaluation.metrics |   MAE                       2.2004
+2026-09-29 22:31:53,769 | INFO     | src.evaluation.metrics |   RMSE                      3.3853
+2026-09-29 22:31:53,769 | INFO     | src.evaluation.metrics |   MAPE                      2.1570
+2026-09-29 22:31:53,769 | INFO     | src.evaluation.metrics |   SMAPE                     2.1619
+2026-09-29 22:31:53,769 | INFO     | src.evaluation.metrics |   R2                        0.9975
+2026-09-29 22:31:53,769 | INFO     | src.evaluation.metrics |   Explained_Variance        0.9975
+2026-09-29 22:31:53,769 | INFO     | src.evaluation.metrics |   Directional_Accuracy      3.9778
+2026-09-29 22:31:53,769 | INFO     | src.evaluation.metrics |   Sharpe_Ratio              nan
+2026-09-29 22:31:53,769 | INFO     | src.evaluation.metrics |   Max_Drawdown_pct          0.0000
+2026-09-29 22:31:53,769 | INFO     | src.evaluation.metrics |   IC                        0.9977
+2026-09-29 22:31:53,783 | INFO     | train_pipeline | 
+Model comparison — VALIDATION (2018-06-19 .. 2022-08-08):
+                     MAE    RMSE    MAPE   SMAPE      R2  Explained_Variance  Directional_Accuracy  Sharpe_Ratio  Max_Drawdown_pct      IC
+arima             0.2895  0.4791  2.3188  2.3055  0.9961              0.9961               52.5000        0.8319          -52.2844  0.9976
+prophet           0.2901  0.4762  2.3466  2.3352  0.9962              0.9962               50.0000        0.5200          -56.3191  0.9976
+lstm              0.2883  0.4755  2.3202  2.3128  0.9962              0.9962               51.6667        1.0658          -45.7116  0.9976
+xgboost           0.2897  0.4793  2.3116  2.3064  0.9961              0.9961               51.7593        1.2877          -42.3869  0.9977
+ensemble          0.2882  0.4750  2.3229  2.3139  0.9962              0.9962               51.2037        0.7096          -56.0824  0.9976
+naive_last_close  0.2886  0.4764  2.3230  2.3186  0.9962              0.9962                   NaN           NaN               NaN  0.9976
+2026-09-29 22:31:53,784 | INFO     | train_pipeline | 
+Model comparison — TEST (2022-08-09 .. 2026-09-29):
+                     MAE    RMSE    MAPE   SMAPE      R2  Explained_Variance  Directional_Accuracy  Sharpe_Ratio  Max_Drawdown_pct      IC
+arima             2.2121  3.3835  2.1780  2.1754  0.9975              0.9975               50.7863        1.3908          -34.0443  0.9978
+prophet           2.2263  3.3885  2.1721  2.1736  0.9975              0.9975               49.0287        1.5672          -36.1798  0.9978
+lstm              2.2123  3.3907  2.1747  2.1773  0.9975              0.9975               50.0463        1.2344          -36.9300  0.9977
+xgboost           2.2090  3.3968  2.1627  2.1664  0.9975              0.9975               49.3062        1.0455          -50.8970  0.9978
+ensemble          2.2100  3.3829  2.1664  2.1686  0.9975              0.9975               50.6013        1.4424          -37.9557  0.9978
+naive_last_close  2.2004  3.3853  2.1570  2.1619  0.9975              0.9975                   NaN           NaN               NaN  0.9977
+2026-09-29 22:31:53,827 | INFO     | train_pipeline | Training pipeline complete. Run ID: 6bd83261bdd6460d9b5db1600a876bd0
+2026-09-30 08:28:56,927 | INFO     | train_pipeline | === STEP 1: Load & Merge Data Sources ===
+2026-09-30 08:28:56,969 | INFO     | src.data.loader | Loaded 6964 rows from nvda_master_dataset.csv
+2026-09-30 08:28:56,989 | INFO     | src.data.loader | Loaded 6964 rows from nvda_yahoo_finance.csv
+2026-09-30 08:28:57,022 | INFO     | src.data.loader | Combined dataset: 6964 trading days (1999-01-22 -> 2026-09-29)
+2026-09-30 08:28:57,153 | INFO     | src.data.preprocessor | Outliers in Volume: 2 rows replaced
+2026-09-30 08:28:57,155 | INFO     | src.data.preprocessor | Clean data: 7222 rows, 8 columns
+2026-09-30 08:28:57,173 | INFO     | src.features.engineer | Technical indicators added: 51 features
+2026-09-30 08:28:57,266 | INFO     | src.features.engineer | Feature set built: 7201 rows (dropped 21 NaN rows), 123 features
+2026-09-30 08:28:57,266 | INFO     | train_pipeline | Feature matrix: 7201 rows × 123 columns
+2026-09-30 08:28:57,269 | INFO     | src.data.preprocessor | Split -> train: 5040 | val: 1080 | test: 1081
+2026-09-30 08:28:57,272 | INFO     | train_pipeline | Model inputs: 61 scale-free features
+2026-09-30 08:28:57,277 | INFO     | train_pipeline | === STEP 2: ARIMA (log price) ===
+2026-09-30 08:28:59,427 | INFO     | src.models.arima_model | Running auto_arima (pmdarima) — max_p=3 max_q=3 seasonal=False …
+2026-09-30 08:29:00,018 | INFO     | src.models.arima_model | auto_arima -> order=(1, 1, 0) seasonal=(0, 0, 0, 0) AIC=-2200.88
+2026-09-30 08:29:00,092 | INFO     | src.models.arima_model | ARIMA(1, 1, 0) on log-price fitted (trend=t, AIC=-2200.88)
+2026-09-30 08:29:00,184 | INFO     | src.models.arima_model | ARIMA(1, 1, 0) on log-price fitted (trend=t, AIC=-2172.26)
+2026-09-30 08:29:00,187 | INFO     | src.models.arima_model | ARIMA model saved -> C:\Users\DellG7\Downloads\nvda_stock_prediction\nvda_stock_prediction\models_saved\arima_model.pkl
+2026-09-30 08:29:00,268 | INFO     | train_pipeline | === STEP 3: Prophet (log price) ===
+2026-09-30 08:29:00,753 | INFO     | cmdstanpy | Chain [1] start processing
+2026-09-30 08:29:03,788 | INFO     | cmdstanpy | Chain [1] done processing
+2026-09-30 08:29:03,794 | INFO     | src.models.prophet_model | Prophet fitted on 5040 rows, last date: 2018-06-18 00:00:00
+2026-09-30 08:29:04,682 | INFO     | cmdstanpy | Chain [1] start processing
+2026-09-30 08:29:08,022 | INFO     | cmdstanpy | Chain [1] done processing
+2026-09-30 08:29:08,022 | INFO     | src.models.prophet_model | Prophet fitted on 6120 rows, last date: 2022-08-08 00:00:00
+2026-09-30 08:29:08,857 | INFO     | cmdstanpy | Chain [1] start processing
+2026-09-30 08:29:12,524 | INFO     | cmdstanpy | Chain [1] done processing
+2026-09-30 08:29:12,547 | INFO     | src.models.prophet_model | Prophet fitted on 7201 rows, last date: 2026-09-29 00:00:00
+2026-09-30 08:29:12,581 | INFO     | src.models.prophet_model | Prophet model saved -> C:\Users\DellG7\Downloads\nvda_stock_prediction\nvda_stock_prediction\models_saved\prophet_model.json
+2026-09-30 08:29:12,581 | INFO     | train_pipeline | === STEP 4: Bidirectional LSTM (next-day return) ===
+2026-09-30 08:29:12,703 | INFO     | src.data.preprocessor | Scalers saved -> C:\Users\DellG7\Downloads\nvda_stock_prediction\nvda_stock_prediction\models_saved\feature_scaler.pkl
+2026-09-30 08:29:12,829 | INFO     | src.models.lstm_model | LSTM backend: torch
+2026-09-30 08:30:18,760 | INFO     | src.models.lstm_model | Epoch  10/100 | loss=2.031542 | val_loss=1.879418
+2026-09-30 08:31:19,388 | INFO     | src.models.lstm_model | Epoch  20/100 | loss=1.979214 | val_loss=1.920892
+2026-09-30 08:31:25,913 | INFO     | src.models.lstm_model | Early stopping at epoch 21 (val_loss=1.878187)
+2026-09-30 08:31:25,915 | INFO     | src.models.lstm_model | PyTorch LSTM training complete — best val_loss=1.878187
+2026-09-30 08:31:25,939 | INFO     | src.models.lstm_model | PyTorch LSTM saved -> C:\Users\DellG7\Downloads\nvda_stock_prediction\nvda_stock_prediction\models_saved\lstm_model.pt
+2026-09-30 08:31:29,325 | INFO     | train_pipeline | === STEP 5: XGBOOST (next-day return) ===
+2026-09-30 08:33:08,181 | INFO     | src.models.xgboost_model | Optuna optimisation done — best RMSE=0.0314, params={'eta': 0.012727774599544847, 'max_depth': 10, 'min_child_weight': 3, 'subsample': 0.9987349142404869, 'colsample_bytree': 0.6742375624326927, 'lambda': 0.0247340620341111, 'alpha': 0.007477709441612112}
+2026-09-30 08:33:10,540 | INFO     | src.models.xgboost_model | XGBOOST model fitted.
+2026-09-30 08:33:10,563 | INFO     | src.models.xgboost_model | XGBOOST model saved -> C:\Users\DellG7\Downloads\nvda_stock_prediction\nvda_stock_prediction\models_saved\xgboost_model.pkl
+2026-09-30 08:33:10,582 | INFO     | train_pipeline | === STEP 6: Ensemble ===
+2026-09-30 08:33:10,609 | INFO     | src.models.ensemble | Ensemble weights optimised -> {'arima': 0.12413257181496223, 'prophet': 0.5662061292962268, 'lstm': 0.198526195415608, 'xgboost': 0.11113510347320286} (RMSE=0.4756)
+2026-09-30 08:33:10,611 | INFO     | src.models.ensemble | Ensemble weights saved -> C:\Users\DellG7\Downloads\nvda_stock_prediction\nvda_stock_prediction\models_saved\ensemble_weights.pkl
+2026-09-30 08:33:10,622 | INFO     | src.evaluation.metrics | === arima [val] Metrics ===
+2026-09-30 08:33:10,623 | INFO     | src.evaluation.metrics |   MAE                       0.2895
+2026-09-30 08:33:10,623 | INFO     | src.evaluation.metrics |   RMSE                      0.4791
+2026-09-30 08:33:10,623 | INFO     | src.evaluation.metrics |   MAPE                      2.3188
+2026-09-30 08:33:10,624 | INFO     | src.evaluation.metrics |   SMAPE                     2.3055
+2026-09-30 08:33:10,624 | INFO     | src.evaluation.metrics |   R2                        0.9961
+2026-09-30 08:33:10,624 | INFO     | src.evaluation.metrics |   Explained_Variance        0.9961
+2026-09-30 08:33:10,624 | INFO     | src.evaluation.metrics |   Directional_Accuracy      52.5000
+2026-09-30 08:33:10,625 | INFO     | src.evaluation.metrics |   Sharpe_Ratio              0.8319
+2026-09-30 08:33:10,625 | INFO     | src.evaluation.metrics |   Max_Drawdown_pct          -52.2844
+2026-09-30 08:33:10,625 | INFO     | src.evaluation.metrics |   IC                        0.9976
+2026-09-30 08:33:10,629 | INFO     | src.evaluation.metrics | === prophet [val] Metrics ===
+2026-09-30 08:33:10,629 | INFO     | src.evaluation.metrics |   MAE                       0.2901
+2026-09-30 08:33:10,629 | INFO     | src.evaluation.metrics |   RMSE                      0.4762
+2026-09-30 08:33:10,629 | INFO     | src.evaluation.metrics |   MAPE                      2.3466
+2026-09-30 08:33:10,629 | INFO     | src.evaluation.metrics |   SMAPE                     2.3352
+2026-09-30 08:33:10,631 | INFO     | src.evaluation.metrics |   R2                        0.9962
+2026-09-30 08:33:10,631 | INFO     | src.evaluation.metrics |   Explained_Variance        0.9962
+2026-09-30 08:33:10,631 | INFO     | src.evaluation.metrics |   Directional_Accuracy      50.0000
+2026-09-30 08:33:10,631 | INFO     | src.evaluation.metrics |   Sharpe_Ratio              0.5200
+2026-09-30 08:33:10,632 | INFO     | src.evaluation.metrics |   Max_Drawdown_pct          -56.3191
+2026-09-30 08:33:10,632 | INFO     | src.evaluation.metrics |   IC                        0.9976
+2026-09-30 08:33:10,637 | INFO     | src.evaluation.metrics | === lstm [val] Metrics ===
+2026-09-30 08:33:10,637 | INFO     | src.evaluation.metrics |   MAE                       0.2887
+2026-09-30 08:33:10,637 | INFO     | src.evaluation.metrics |   RMSE                      0.4766
+2026-09-30 08:33:10,637 | INFO     | src.evaluation.metrics |   MAPE                      2.3242
+2026-09-30 08:33:10,637 | INFO     | src.evaluation.metrics |   SMAPE                     2.3158
+2026-09-30 08:33:10,637 | INFO     | src.evaluation.metrics |   R2                        0.9962
+2026-09-30 08:33:10,639 | INFO     | src.evaluation.metrics |   Explained_Variance        0.9962
+2026-09-30 08:33:10,639 | INFO     | src.evaluation.metrics |   Directional_Accuracy      51.6667
+2026-09-30 08:33:10,639 | INFO     | src.evaluation.metrics |   Sharpe_Ratio              0.7074
+2026-09-30 08:33:10,640 | INFO     | src.evaluation.metrics |   Max_Drawdown_pct          -56.4867
+2026-09-30 08:33:10,640 | INFO     | src.evaluation.metrics |   IC                        0.9976
+2026-09-30 08:33:10,644 | INFO     | src.evaluation.metrics | === xgboost [val] Metrics ===
+2026-09-30 08:33:10,645 | INFO     | src.evaluation.metrics |   MAE                       0.2897
+2026-09-30 08:33:10,645 | INFO     | src.evaluation.metrics |   RMSE                      0.4793
+2026-09-30 08:33:10,645 | INFO     | src.evaluation.metrics |   MAPE                      2.3116
+2026-09-30 08:33:10,645 | INFO     | src.evaluation.metrics |   SMAPE                     2.3064
+2026-09-30 08:33:10,645 | INFO     | src.evaluation.metrics |   R2                        0.9961
+2026-09-30 08:33:10,645 | INFO     | src.evaluation.metrics |   Explained_Variance        0.9961
+2026-09-30 08:33:10,645 | INFO     | src.evaluation.metrics |   Directional_Accuracy      51.7593
+2026-09-30 08:33:10,645 | INFO     | src.evaluation.metrics |   Sharpe_Ratio              1.2877
+2026-09-30 08:33:10,645 | INFO     | src.evaluation.metrics |   Max_Drawdown_pct          -42.3869
+2026-09-30 08:33:10,645 | INFO     | src.evaluation.metrics |   IC                        0.9977
+2026-09-30 08:33:10,651 | INFO     | src.evaluation.metrics | === ensemble [val] Metrics ===
+2026-09-30 08:33:10,652 | INFO     | src.evaluation.metrics |   MAE                       0.2883
+2026-09-30 08:33:10,652 | INFO     | src.evaluation.metrics |   RMSE                      0.4756
+2026-09-30 08:33:10,652 | INFO     | src.evaluation.metrics |   MAPE                      2.3234
+2026-09-30 08:33:10,652 | INFO     | src.evaluation.metrics |   SMAPE                     2.3130
+2026-09-30 08:33:10,652 | INFO     | src.evaluation.metrics |   R2                        0.9962
+2026-09-30 08:33:10,652 | INFO     | src.evaluation.metrics |   Explained_Variance        0.9962
+2026-09-30 08:33:10,652 | INFO     | src.evaluation.metrics |   Directional_Accuracy      51.5741
+2026-09-30 08:33:10,652 | INFO     | src.evaluation.metrics |   Sharpe_Ratio              0.6919
+2026-09-30 08:33:10,654 | INFO     | src.evaluation.metrics |   Max_Drawdown_pct          -56.5847
+2026-09-30 08:33:10,654 | INFO     | src.evaluation.metrics |   IC                        0.9976
+2026-09-30 08:33:10,659 | INFO     | src.evaluation.metrics | === naive_last_close [val] Metrics ===
+2026-09-30 08:33:10,659 | INFO     | src.evaluation.metrics |   MAE                       0.2886
+2026-09-30 08:33:10,659 | INFO     | src.evaluation.metrics |   RMSE                      0.4764
+2026-09-30 08:33:10,659 | INFO     | src.evaluation.metrics |   MAPE                      2.3230
+2026-09-30 08:33:10,660 | INFO     | src.evaluation.metrics |   SMAPE                     2.3186
+2026-09-30 08:33:10,660 | INFO     | src.evaluation.metrics |   R2                        0.9962
+2026-09-30 08:33:10,660 | INFO     | src.evaluation.metrics |   Explained_Variance        0.9962
+2026-09-30 08:33:10,660 | INFO     | src.evaluation.metrics |   Directional_Accuracy      3.7037
+2026-09-30 08:33:10,660 | INFO     | src.evaluation.metrics |   Sharpe_Ratio              nan
+2026-09-30 08:33:10,660 | INFO     | src.evaluation.metrics |   Max_Drawdown_pct          0.0000
+2026-09-30 08:33:10,660 | INFO     | src.evaluation.metrics |   IC                        0.9976
+2026-09-30 08:33:10,668 | INFO     | src.evaluation.metrics | === arima [test] Metrics ===
+2026-09-30 08:33:10,669 | INFO     | src.evaluation.metrics |   MAE                       2.2138
+2026-09-30 08:33:10,669 | INFO     | src.evaluation.metrics |   RMSE                      3.3841
+2026-09-30 08:33:10,669 | INFO     | src.evaluation.metrics |   MAPE                      2.1787
+2026-09-30 08:33:10,669 | INFO     | src.evaluation.metrics |   SMAPE                     2.1761
+2026-09-30 08:33:10,669 | INFO     | src.evaluation.metrics |   R2                        0.9975
+2026-09-30 08:33:10,669 | INFO     | src.evaluation.metrics |   Explained_Variance        0.9975
+2026-09-30 08:33:10,669 | INFO     | src.evaluation.metrics |   Directional_Accuracy      50.6938
+2026-09-30 08:33:10,669 | INFO     | src.evaluation.metrics |   Sharpe_Ratio              1.3856
+2026-09-30 08:33:10,671 | INFO     | src.evaluation.metrics |   Max_Drawdown_pct          -34.0443
+2026-09-30 08:33:10,671 | INFO     | src.evaluation.metrics |   IC                        0.9978
+2026-09-30 08:33:10,691 | INFO     | src.evaluation.metrics | === prophet [test] Metrics ===
+2026-09-30 08:33:10,692 | INFO     | src.evaluation.metrics |   MAE                       2.2274
+2026-09-30 08:33:10,692 | INFO     | src.evaluation.metrics |   RMSE                      3.3889
+2026-09-30 08:33:10,692 | INFO     | src.evaluation.metrics |   MAPE                      2.1726
+2026-09-30 08:33:10,693 | INFO     | src.evaluation.metrics |   SMAPE                     2.1741
+2026-09-30 08:33:10,693 | INFO     | src.evaluation.metrics |   R2                        0.9975
+2026-09-30 08:33:10,693 | INFO     | src.evaluation.metrics |   Explained_Variance        0.9975
+2026-09-30 08:33:10,693 | INFO     | src.evaluation.metrics |   Directional_Accuracy      48.9362
+2026-09-30 08:33:10,693 | INFO     | src.evaluation.metrics |   Sharpe_Ratio              1.5614
+2026-09-30 08:33:10,693 | INFO     | src.evaluation.metrics |   Max_Drawdown_pct          -36.1798
+2026-09-30 08:33:10,694 | INFO     | src.evaluation.metrics |   IC                        0.9978
+2026-09-30 08:33:10,708 | INFO     | src.evaluation.metrics | === lstm [test] Metrics ===
+2026-09-30 08:33:10,708 | INFO     | src.evaluation.metrics |   MAE                       2.2053
+2026-09-30 08:33:10,708 | INFO     | src.evaluation.metrics |   RMSE                      3.3868
+2026-09-30 08:33:10,708 | INFO     | src.evaluation.metrics |   MAPE                      2.1602
+2026-09-30 08:33:10,708 | INFO     | src.evaluation.metrics |   SMAPE                     2.1613
+2026-09-30 08:33:10,708 | INFO     | src.evaluation.metrics |   R2                        0.9975
+2026-09-30 08:33:10,708 | INFO     | src.evaluation.metrics |   Explained_Variance        0.9975
+2026-09-30 08:33:10,708 | INFO     | src.evaluation.metrics |   Directional_Accuracy      51.8039
+2026-09-30 08:33:10,708 | INFO     | src.evaluation.metrics |   Sharpe_Ratio              1.4649
+2026-09-30 08:33:10,708 | INFO     | src.evaluation.metrics |   Max_Drawdown_pct          -41.0099
+2026-09-30 08:33:10,708 | INFO     | src.evaluation.metrics |   IC                        0.9977
+2026-09-30 08:33:10,721 | INFO     | src.evaluation.metrics | === xgboost [test] Metrics ===
+2026-09-30 08:33:10,721 | INFO     | src.evaluation.metrics |   MAE                       2.2107
+2026-09-30 08:33:10,721 | INFO     | src.evaluation.metrics |   RMSE                      3.3974
+2026-09-30 08:33:10,721 | INFO     | src.evaluation.metrics |   MAPE                      2.1635
+2026-09-30 08:33:10,722 | INFO     | src.evaluation.metrics |   SMAPE                     2.1672
+2026-09-30 08:33:10,722 | INFO     | src.evaluation.metrics |   R2                        0.9975
+2026-09-30 08:33:10,722 | INFO     | src.evaluation.metrics |   Explained_Variance        0.9975
+2026-09-30 08:33:10,722 | INFO     | src.evaluation.metrics |   Directional_Accuracy      49.2137
+2026-09-30 08:33:10,722 | INFO     | src.evaluation.metrics |   Sharpe_Ratio              1.0398
+2026-09-30 08:33:10,722 | INFO     | src.evaluation.metrics |   Max_Drawdown_pct          -50.8970
+2026-09-30 08:33:10,722 | INFO     | src.evaluation.metrics |   IC                        0.9978
+2026-09-30 08:33:10,734 | INFO     | src.evaluation.metrics | === ensemble [test] Metrics ===
+2026-09-30 08:33:10,735 | INFO     | src.evaluation.metrics |   MAE                       2.2110
+2026-09-30 08:33:10,735 | INFO     | src.evaluation.metrics |   RMSE                      3.3788
+2026-09-30 08:33:10,735 | INFO     | src.evaluation.metrics |   MAPE                      2.1619
+2026-09-30 08:33:10,735 | INFO     | src.evaluation.metrics |   SMAPE                     2.1630
+2026-09-30 08:33:10,735 | INFO     | src.evaluation.metrics |   R2                        0.9975
+2026-09-30 08:33:10,736 | INFO     | src.evaluation.metrics |   Explained_Variance        0.9975
+2026-09-30 08:33:10,736 | INFO     | src.evaluation.metrics |   Directional_Accuracy      50.6938
+2026-09-30 08:33:10,736 | INFO     | src.evaluation.metrics |   Sharpe_Ratio              1.3921
+2026-09-30 08:33:10,736 | INFO     | src.evaluation.metrics |   Max_Drawdown_pct          -44.6155
+2026-09-30 08:33:10,736 | INFO     | src.evaluation.metrics |   IC                        0.9978
+2026-09-30 08:33:10,745 | INFO     | src.evaluation.metrics | === naive_last_close [test] Metrics ===
+2026-09-30 08:33:10,745 | INFO     | src.evaluation.metrics |   MAE                       2.2013
+2026-09-30 08:33:10,745 | INFO     | src.evaluation.metrics |   RMSE                      3.3856
+2026-09-30 08:33:10,745 | INFO     | src.evaluation.metrics |   MAPE                      2.1574
+2026-09-30 08:33:10,745 | INFO     | src.evaluation.metrics |   SMAPE                     2.1623
+2026-09-30 08:33:10,745 | INFO     | src.evaluation.metrics |   R2                        0.9975
+2026-09-30 08:33:10,745 | INFO     | src.evaluation.metrics |   Explained_Variance        0.9975
+2026-09-30 08:33:10,749 | INFO     | src.evaluation.metrics |   Directional_Accuracy      3.9778
+2026-09-30 08:33:10,749 | INFO     | src.evaluation.metrics |   Sharpe_Ratio              nan
+2026-09-30 08:33:10,749 | INFO     | src.evaluation.metrics |   Max_Drawdown_pct          0.0000
+2026-09-30 08:33:10,749 | INFO     | src.evaluation.metrics |   IC                        0.9977
+2026-09-30 08:33:10,755 | INFO     | train_pipeline | 
+Model comparison — VALIDATION (2018-06-19 .. 2022-08-08):
+                     MAE    RMSE    MAPE   SMAPE      R2  Explained_Variance  Directional_Accuracy  Sharpe_Ratio  Max_Drawdown_pct      IC
+arima             0.2895  0.4791  2.3188  2.3055  0.9961              0.9961               52.5000        0.8319          -52.2844  0.9976
+prophet           0.2901  0.4762  2.3466  2.3352  0.9962              0.9962               50.0000        0.5200          -56.3191  0.9976
+lstm              0.2887  0.4766  2.3242  2.3158  0.9962              0.9962               51.6667        0.7074          -56.4867  0.9976
+xgboost           0.2897  0.4793  2.3116  2.3064  0.9961              0.9961               51.7593        1.2877          -42.3869  0.9977
+ensemble          0.2883  0.4756  2.3234  2.3130  0.9962              0.9962               51.5741        0.6919          -56.5847  0.9976
+naive_last_close  0.2886  0.4764  2.3230  2.3186  0.9962              0.9962                   NaN           NaN               NaN  0.9976
+2026-09-30 08:33:10,764 | INFO     | train_pipeline | 
+Model comparison — TEST (2022-08-09 .. 2026-09-29):
+                     MAE    RMSE    MAPE   SMAPE      R2  Explained_Variance  Directional_Accuracy  Sharpe_Ratio  Max_Drawdown_pct      IC
+arima             2.2138  3.3841  2.1787  2.1761  0.9975              0.9975               50.6938        1.3856          -34.0443  0.9978
+prophet           2.2274  3.3889  2.1726  2.1741  0.9975              0.9975               48.9362        1.5614          -36.1798  0.9978
+lstm              2.2053  3.3868  2.1602  2.1613  0.9975              0.9975               51.8039        1.4649          -41.0099  0.9977
+xgboost           2.2107  3.3974  2.1635  2.1672  0.9975              0.9975               49.2137        1.0398          -50.8970  0.9978
+ensemble          2.2110  3.3788  2.1619  2.1630  0.9975              0.9975               50.6938        1.3921          -44.6155  0.9978
+naive_last_close  2.2013  3.3856  2.1574  2.1623  0.9975              0.9975                   NaN           NaN               NaN  0.9977
+2026-09-30 08:33:10,801 | INFO     | train_pipeline | Training pipeline complete. Run ID: 4ac052cf11a84cb596f6e517faafc467

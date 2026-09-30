@@ -1,0 +1,15 @@
+artifact_uri: file:///C:/Users/DellG7/Downloads/nvda_stock_prediction/nvda_stock_prediction/mlruns/103292297045073878/6bd83261bdd6460d9b5db1600a876bd0/artifacts
+end_time: 1790701313827
+entry_point_name: ''
+experiment_id: '103292297045073878'
+lifecycle_stage: active
+run_id: 6bd83261bdd6460d9b5db1600a876bd0
+run_name: full_pipeline_all
+run_uuid: 6bd83261bdd6460d9b5db1600a876bd0
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1790700966499
+status: 3
+tags: []
+user_id: DellG7
