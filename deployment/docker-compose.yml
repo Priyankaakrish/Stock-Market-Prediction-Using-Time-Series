@@ -1,0 +1,87 @@
+version: "3.9"
+
+services:
+
+  # ── Prediction API ──────────────────────────────────────────────────────────
+  nvda-api:
+    build:
+      context: ..
+      dockerfile: deployment/Dockerfile
+    image: nvda-stock-prediction:latest
+    container_name: nvda-api
+    ports:
+      - "8000:8000"
+    environment:
+      - API_HOST=0.0.0.0
+      - API_PORT=8000
+      - API_WORKERS=1
+      - LOG_LEVEL=INFO
+    volumes:
+      - ../models_saved:/app/models_saved:ro     # read-only model artefacts
+      - ../data:/app/data:ro                     # read-only data
+      - ../logs:/app/logs                        # writable logs
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - nvda-net
+
+  # ── MLflow Tracking Server ──────────────────────────────────────────────────
+  mlflow:
+    image: python:3.11-slim
+    container_name: nvda-mlflow
+    command: >
+      bash -c "pip install mlflow &&
+               mlflow server
+               --backend-store-uri /mlruns
+               --default-artifact-root /mlruns
+               --host 0.0.0.0
+               --port 5000"
+    ports:
+      - "5000:5000"
+    volumes:
+      - ../mlruns:/mlruns
+    networks:
+      - nvda-net
+    restart: unless-stopped
+
+  # ── Prometheus (optional monitoring) ───────────────────────────────────────
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: nvda-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    networks:
+      - nvda-net
+    restart: unless-stopped
+    profiles: ["monitoring"]   # only started with --profile monitoring
+
+  # ── Grafana (optional dashboards) ──────────────────────────────────────────
+  grafana:
+    image: grafana/grafana:latest
+    container_name: nvda-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana-storage:/var/lib/grafana
+    networks:
+      - nvda-net
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+    profiles: ["monitoring"]
+
+networks:
+  nvda-net:
+    driver: bridge
+
+volumes:
+  grafana-storage:

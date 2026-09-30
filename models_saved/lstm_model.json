@@ -1,0 +1,14 @@
+{
+  "backend": "torch",
+  "n_features": 61,
+  "lookback": 60,
+  "horizon": 1,
+  "units": [
+    128,
+    64
+  ],
+  "dropout": 0.2,
+  "recurrent_drop": 0.2,
+  "dense_units": 32,
+  "lr": 0.001
+}
