@@ -627,8 +627,7 @@ Test period **2022-08-09 → 2026-09-29** (1,081 trading days). Each model predi
 
 ## License
 
-MIT License  — 
+MIT License  —  feel  free to fork and build on this.
 
-feel free to fork and build on this. 
 ---
 
